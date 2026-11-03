@@ -445,7 +445,7 @@ function renderSmartSuggestions(){
  const grid=$('smartImportGrid');if(!grid)return;grid.replaceChildren();
  const safe=smartSuggestions.filter(x=>!x.reviewNeeded);
  $('saveAllSuggestions').style.display=safe.length?'inline-flex':'none';
- $('saveAllSuggestions').textContent='✓ '+safe.length+' geprüfte'+(safe.length===1?'s Teil':' Teile')+' speichern';
+ $('saveAllSuggestions').textContent='✓ '+safe.length+' unauffällige'+(safe.length===1?'s Teil':' Teile')+' speichern';
  const questionable=smartSuggestions.filter(x=>x.reviewNeeded);
  const section=(parent,s,i)=>{
   const el=document.createElement('article');el.className='item smart-card';
@@ -505,7 +505,7 @@ async function saveSuggestion(i){const s=smartSuggestions[i];if(!s)return;if(s.r
 function dropSuggestion(i){smartSuggestions.splice(i,1);renderSmartSuggestions();$('smartImportStatus').style.display='block';$('smartImportStatus').textContent=smartSuggestions.length?'Vorschlag verworfen.':'Keine Vorschläge mehr vorhanden.';if(!smartSuggestions.length)$('smartImportBox').style.display='none'}
 async function saveAllSuggestions(){
  const approved=smartSuggestions.filter(s=>!s.reviewNeeded);
- if(!approved.length)return toast('Keine geprüften Teile zum Speichern');
+ if(!approved.length)return toast('Keine unauffälligen Teile zum Speichern');
  for(const s of approved){
   const i=smartSuggestions.indexOf(s),name=$('sg-name-'+i)?.value?.trim()||s.name;
   const category=$('sg-cat-'+i)?.value||s.category;
@@ -515,7 +515,7 @@ async function saveAllSuggestions(){
  smartSuggestions=smartSuggestions.filter(s=>s.reviewNeeded);
  await persist();render();renderSmartSuggestions();
  $('smartImportStatus').style.display='block';
- $('smartImportStatus').textContent=approved.length+' geprüfte Teile gespeichert.'+(smartSuggestions.length?' Fragliche Vorschläge bleiben zur manuellen Prüfung.':'');
+ $('smartImportStatus').textContent=approved.length+' unauffällige Teile gespeichert.'+(smartSuggestions.length?' Fragliche Vorschläge bleiben zur manuellen Prüfung.':'');
  if(!smartSuggestions.length)$('smartImportBox').style.display='none';
  toast(approved.length+' Teile gespeichert');
 }
