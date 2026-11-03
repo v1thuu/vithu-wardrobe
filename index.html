@@ -340,9 +340,27 @@ async function createCleanProductImage(dataUrl,category='top'){
  const cloth=document.createElement('canvas');cloth.width=Math.max(1,Math.round(w));cloth.height=Math.max(1,Math.round(h));
  const cctx=cloth.getContext('2d');
  cctx.drawImage(source,x0,y0,w,h,0,0,cloth.width,cloth.height);
- // Use native resolution to keep fabric texture. Do not blur the garment itself.
- const cleanCtx=cloth.getContext('2d');
- cleanCtx.imageSmoothingEnabled=true;
+ // Local edge decontamination for the catalog render only.
+ // On partly transparent edges, take the garment RGB from nearby opaque pixels:
+ // it reduces background-coloured halos without blurring fabric texture.
+ const cleanCtx=cloth.getContext('2d',{willReadFrequently:true});
+ const ed=cleanCtx.getImageData(0,0,cloth.width,cloth.height),pix=ed.data;
+ const original=new Uint8ClampedArray(pix),W=cloth.width,H=cloth.height;
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+  const idx=(y*W+x)*4,alpha=original[idx+3];
+  if(alpha<18||alpha>=245)continue;
+  let found=-1,best=99;
+  for(let oy=-2;oy<=2;oy++)for(let ox=-2;ox<=2;ox++){
+   const nx=x+ox,ny=y+oy;if(nx<0||ny<0||nx>=W||ny>=H)continue;
+   const ni=(ny*W+nx)*4,dist=ox*ox+oy*oy;
+   if(original[ni+3]>=248&&dist<best){best=dist;found=ni}
+  }
+  if(found>=0){
+   const fraction=Math.min(.9,Math.max(.2,(255-alpha)/255));
+   for(let c=0;c<3;c++)pix[idx+c]=Math.round(original[idx+c]*(1-fraction)+original[found+c]*fraction);
+  }
+ }
+ cleanCtx.putImageData(ed,0,0);
  const out=document.createElement('canvas');out.width=640;out.height=760;const ctx=out.getContext('2d');
  const bg=ctx.createLinearGradient(0,0,0,760);bg.addColorStop(0,'#fbfbf8');bg.addColorStop(1,'#f1f1ed');ctx.fillStyle=bg;ctx.fillRect(0,0,640,760);
  // Keep consistent neutral backdrop; do not invent floor shadows.
