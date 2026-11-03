@@ -498,7 +498,7 @@ function validateFocusedMask(candidate,mask,w,h){
 async function compareFocusedCutout(i){
  const target=smartSuggestions[i];if(!target||qualityBusy)return;
  if(!target.frame||!target.bounds)return toast('Dieser Import hat keinen prüfbaren Originalausschnitt.');
- qualityBusy=true;
+ qualityBusy=true;const initialSerial=importSerial;
  const status=$('smartImportStatus');status.style.display='block';
  status.textContent='KI analysiert nur dieses Kleidungsstück mit mehr Detail …';
  try{
@@ -513,6 +513,7 @@ async function compareFocusedCutout(i){
   region.getContext('2d').drawImage(src,x0,y0,sw,sh,0,0,sw,sh);
   const parser=await getGarmentParser();
   const results=await parser(region.toDataURL('image/jpeg',.91));
+  if(initialSerial!==importSerial||!smartSuggestions.includes(target))return;
   const mask=new Uint8Array(sw*sh);
   for(const entry of results){
    const label=normalizeGarmentLabel(entry.label);
@@ -550,7 +551,7 @@ async function compareFocusedCutout(i){
   const raw=document.createElement('canvas');raw.width=cw;raw.height=ch;
   raw.getContext('2d').drawImage(region,frame.minX,frame.minY,cw,ch,0,0,cw,ch);
   if(!smartSuggestions.includes(target)){status.textContent='Der Vorschlag wurde inzwischen geändert.';return}
-  qualityCandidate={id:target.id,image:output.toDataURL('image/png'),originalCrop:raw.toDataURL('image/jpeg',.93),
+  qualityCandidate={id:target.id,serial:initialSerial,image:output.toDataURL('image/png'),originalCrop:raw.toDataURL('image/jpeg',.93),
    frame:{minX:x0+frame.minX,minY:y0+frame.minY,maxX:x0+frame.maxX,maxY:y0+frame.maxY},
    bounds:{...box,minX:x0+box.minX,maxX:x0+box.maxX,minY:y0+box.minY,maxY:y0+box.maxY},
    area:box.area};
@@ -564,12 +565,14 @@ async function compareFocusedCutout(i){
 }
 function acceptQualityCompare(){
  if(!qualityCandidate)return;
+ if(qualityCandidate.serial!==importSerial)return closeQualityCompare();
  const target=smartSuggestions.find(x=>x.id===qualityCandidate.id);
  if(!target)return closeQualityCompare();
+ const wasSuspicious=target.reviewNeeded;
  Object.assign(target,qualityCandidate,{qualityTried:true});
- // Reclassification and safety label should be reassessed by the user.
- target.warning='Neue, lokal verfeinerte KI-Maske – bitte vor dem Speichern prüfen.';
- target.reviewNeeded=false;
+ // A flagged limb cannot be declared safe merely because the user chose a new mask.
+ target.warning=wasSuspicious?'Neue KI-Maske: Ursprünglicher Verdacht auf Fehl-Erkennung – bitte weiterhin prüfen.':'Neue KI-Maske – bitte vor dem Speichern prüfen.';
+ target.reviewNeeded=wasSuspicious;
  closeQualityCompare();renderSmartSuggestions();toast('Neue Freistellung übernommen');
 }
 function renderSmartSuggestions(){
