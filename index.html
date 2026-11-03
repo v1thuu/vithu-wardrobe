@@ -101,7 +101,7 @@
 </style></head><body>
 <header><div><div class="eyebrow">YOUR PERSONAL STYLE LAB</div><h1>VITHU <span>WARDROBE</span> <small>V3.10 · HYBRID IMPORT BETA</small></h1><p>Dein kostenloser Kleiderschrank – Bilder bleiben lokal, keine bezahlte KI-API.</p></div><div class="btnrow"><button class="secondary" onclick="exportBackup()">↓ Backup</button><label class="filebutton secondary">↑ Backup laden<input type="file" accept="application/json,.json" onchange="importBackup(event)"></label></div></header>
 <div class="layout"><section class="closet-hero wide"><div><span class="closet-kicker">DEIN DIGITALER KLEIDERSCHRANK</span><h2>Deine Kleidung. Alles an einem Ort.</h2><p>Foto auswählen, Kleidungsstücke erkennen lassen, speichern. Den Rest hältst du einfach.</p></div><button class="closet-add" onclick="openImport()">＋ Kleidung hinzufügen</button></section><section class="panel wide closet-shelf" id="closetShelf"><div class="sectionHead"><h2>Mein Kleiderschrank</h2><span class="chip" id="count">0 Teile</span></div><div class="inv-tools"><input type="search" placeholder="🔎 Kleidung suchen" aria-label="Inventar durchsuchen" oninput="inventorySearch=this.value.toLocaleLowerCase('de');render()"><select aria-label="Sortierung" onchange="inventorySort=this.value;render()"><option value="new">Neueste</option><option value="old">Älteste</option><option value="name">Name A–Z</option><option value="favorites">Favoriten</option></select></div><div id="invSummary" class="inv-summary"></div><div class="inv-catbar" id="invCatbar"></div><div class="grid inv-grid" id="grid"></div><details class="closet-advanced closet-display-settings"><summary>Darstellungsoptionen · Clean-Bilder aktualisieren</summary><div class="btnrow" style="margin:12px 0"><button class="secondary" onclick="buildAllShopLooks()" id="shopAllBtn">✨ Auto Clean für gesamte Garderobe</button></div><p class="muted">Produktansichten werden lokal erzeugt: neutraler Hintergrund, stärkere Zentrierung, leicht geglättete Kanten und etwas cleanerer Studio-Look. Das Original bleibt unverändert und wird weiterhin auf dem Avatar verwendet. Keine generative KI, keine echte Faltenrekonstruktion.</p></details></section><section class="panel wide closet-import" id="importPanel" hidden><div class="sectionHead"><h2>Kleidung hinzufügen</h2><button class="secondary" onclick="closeImport()">✕</button></div>
-<div class="import-route"><span id="routeStatus" aria-live="polite">Foto auswählen</span><details id="routeOptions"><summary>Bildtyp ändern</summary><div class="tabs"><button id="mode-auto" class="active" onclick="setMode('auto');retrySmartRoute()">Automatisch</button><button id="mode-single" class="secondary" onclick="setMode('single');retrySmartRoute()">Produktfotos</button><button id="mode-worn" class="secondary" onclick="setMode('worn');retrySmartRoute()">Outfitfoto</button></div></details></div>
+<div class="import-route"><span id="routeStatus" aria-live="polite">Foto auswählen</span><details id="routeOptions"><summary>Bildtyp ändern</summary><div class="tabs"><button id="mode-auto" class="active" onclick="setMode('auto');retrySmartRoute()">Automatisch</button><button id="mode-single" class="secondary" onclick="setMode('single');retrySmartRoute()">Produktfotos</button><button id="mode-worn" class="secondary" onclick="setMode('worn');retrySmartRoute()">Outfitfoto</button></div><div class="tabs"><button id="kind-auto" class="active" onclick="setHybridKind('auto')">Automatisch</button><button id="kind-model" class="secondary" onclick="setHybridKind('model')">Shop am Model</button><button id="kind-selfie" class="secondary" onclick="setHybridKind('selfie')">Spiegelselfie</button></div></details></div>
 <label class="f closet-file">Foto wählen<input id="upload" type="file" accept="image/*" onchange="onPhoto(event)"></label>
 <details class="closet-extras"><summary>Hilfe &amp; Einstellungen</summary><p class="muted">Die Bilder werden auf deinem Gerät verarbeitet. Beim ersten KI-Import kann ein Modelldownload nötig sein.</p><div class="btnrow closet-retry"><button class="secondary" id="smartImportBtn" onclick="retrySmartRoute()">↻ Erneut analysieren</button></div></details>
 <div class="cropbox" id="smartImportBox"><p id="smartImportStatus" class="notice" style="display:none"></p><div class="grid" id="smartImportGrid"></div>
@@ -229,7 +229,7 @@ async function retrySmartRoute(){
 async function onPhoto(e){
  clearFashionComparison();
  const file=e.target.files&&e.target.files[0];if(!file)return;
- setMode('auto');openImport();const serial=++importSerial;
+ setMode('auto');setHybridKind('auto',false);openImport();const serial=++importSerial;
  const cb=$('cropbox');cb.style.display='none';
  $('smartImportBox').style.display='block';$('smartImportStatus').style.display='block';
  $('smartImportStatus').textContent='Foto wird vorbereitet …';
@@ -269,7 +269,10 @@ function inspectPhotoForRoute(){
  const coverage=transparent/n;
  const uniform=stdev<19&&light/n>206;
  const neutralStudio=stdev<26&&light/n>92&&Math.max(...mean)-Math.min(...mean)<24;
- return {type:coverage>.18?'transparent':uniform?'product':neutralStudio?'model':'outfit',mean,stdev,light:light/n,coverage,uniform,neutralStudio};
+ // Shop screenshots typically have a white header and footer around the model photo.
+ const whiteShare=(from,to)=>{let n=0,white=0;for(let y=from;y<to;y+=3)for(let x=0;x<w;x+=4){const k=(y*w+x)*4;n++;if(d[k]>232&&d[k+1]>232&&d[k+2]>232)white++}return n?white/n:0};
+ const shopScreenshot=whiteShare(0,Math.max(1,Math.round(h*.055)))>.78&&whiteShare(Math.floor(h*.945),h)>.78&&!uniform;
+ return {type:coverage>.18?'transparent':uniform?'product':neutralStudio||shopScreenshot?'model':'outfit',mean,stdev,light:light/n,coverage,uniform,neutralStudio,shopScreenshot};
 }
 async function runSmartRoute(serial){
  if(!sourceImg||serial!==importSerial)return;
@@ -278,7 +281,7 @@ async function runSmartRoute(serial){
  setMode(importMode);
  $('routeStatus').textContent=route==='single'
   ?(stats.type==='transparent'?'✓ Transparentes Produktbild erkannt':'✓ Produktfoto-Verarbeitung')
-  :stats.type==='model'?'✓ Shopfoto am Model · Kleidungsstücke erkennen':'✓ Outfitfoto · KI erkennt einzelne Teile';
+  :chooseHybridKind(stats)==='model'?'✓ Shopfoto am Model':'✓ Outfitfoto';
  $('smartImportBox').style.display='block';$('smartImportStatus').style.display='block';
  if(route==='single'){
   await smartProductImport(stats,serial);
@@ -375,6 +378,8 @@ function reportQualityRun(data){
 }
 function tierFromCandidate(s){
  // Heuristic triage, NOT calibrated model confidence.
+ if(s.hybridInvalid)return {grade:'reject',reason:s.hybridReason||'Keine brauchbare Maske'};
+ if(s.hybridReview)return {grade:'review',reason:s.hybridReason||'Bitte prüfen'};
  if(s.quality?.suspicious)return {grade:'reject',reason:'Möglicher Arm statt Hose'};
  if(s.reviewNeeded)return {grade:'review',reason:s.warning||'Körperbereich überlappt'};
  if(s.clipped)return {grade:'review',reason:'Am Bildrand abgeschnitten'};
@@ -613,6 +618,77 @@ async function smartImportBeta(engine='legacy',options={}){
   return output;
  }catch(e){console.error('Garment parser '+engine,e);if(!quiet&&jobSerial===importSerial){status.textContent='KI nicht verfügbar – bitte manuell korrigieren';$('manualTools').open=true;$('cropbox').style.display='block'}return null}
  finally{smartImportBusy=false;if(btn)btn.disabled=false}
+}
+// Conservative per-category hybrid: body fragments may never be saved automatically.
+let hybridPhotoKind='auto';
+function setHybridKind(v,retry=true){
+ hybridPhotoKind=v;
+ for(const x of ['auto','model','selfie']){const el=$('kind-'+x);if(el)el.className=x===v?'active':'secondary'}
+ if(retry&&sourceImg)retrySmartRoute();
+}
+function chooseHybridKind(stats,override=hybridPhotoKind){
+ if(override==='model'||override==='selfie')return override;
+ return stats.type==='model'?'model':'selfie';
+}
+function hybridCandidateVerdict(c,category,imageHeight){
+ if(!c)return {ok:false,reason:'Nicht erkannt'};
+ if(c.quality?.suspicious)return {ok:false,reason:'Körperteil statt Kleidung möglich'};
+ const b=c.bounds;
+ if(!b||!Number.isFinite(b.width)||!Number.isFinite(b.height))return {ok:false,reason:'Ungültige Form'};
+ const ratio=b.width/Math.max(1,b.height),relHeight=b.height/Math.max(1,imageHeight);
+ if(category==='bottom'){
+  if(ratio<.30)return {ok:false,reason:'Armförmige Hose'};
+  if(relHeight<.16)return {ok:false,reason:'Kleines Hosenfragment'};
+  if(ratio>2.2&&relHeight<.30)return {ok:false,reason:'Flacher Hosenstreifen'};
+ }else if(category==='top'){
+  if(relHeight<.14||ratio<.18)return {ok:false,reason:'Unvollständiges Oberteil'};
+ }
+ return {ok:true,reason:c.clipped?'Bildrand abgeschnitten':'Plausible Form'};
+}
+function mergeHybridCandidates(b2,b4,kind,imageHeight){
+ const groups=new Set([...(b2||[]),...(b4||[])].map(x=>x.category)),merged=[];
+ for(const category of groups){
+  const old=(b2||[]).find(c=>c.category===category),fresh=(b4||[]).find(c=>c.category===category);
+  const va=hybridCandidateVerdict(old,category,imageHeight),vb=hybridCandidateVerdict(fresh,category,imageHeight);
+  const preferB4=category==='bottom'||(kind==='model'&&category==='top');
+  let selected,engine;
+  if(preferB4&&vb.ok){selected=fresh;engine='B4'}
+  else if(va.ok){selected=old;engine='B2'}
+  else if(vb.ok){selected=fresh;engine='B4'}
+  else{selected=old||fresh;engine=old?'B2':'B4'}
+  if(!selected)continue;
+  const ok=engine==='B4'?vb.ok:va.ok;
+  const reason=engine==='B4'?vb.reason:va.reason;
+  merged.push({...selected,hybridEngine:engine,
+   source:engine==='B4'?'fashn-q8':selected.source,
+   hybridInvalid:!ok,hybridReview:ok&&Boolean(selected.clipped),
+   hybridReason:!ok?'Kein brauchbarer Vorschlag · '+reason:selected.clipped?'Bildrand abgeschnitten':''});
+ }
+ return merged.sort((a,b)=>b.area-a.area);
+}
+function comparableHybridCategories(b2,b4,h){
+ return [...new Set((b2||[]).map(x=>x.category))].filter(category=>{
+  const a=b2.find(x=>x.category===category),b=b4?.find(x=>x.category===category);
+  return hybridCandidateVerdict(a,category,h).ok&&hybridCandidateVerdict(b,category,h).ok;
+ });
+}
+async function runHybridImport(serial,stats){
+ const status=$('smartImportStatus'),kind=chooseHybridKind(stats);
+ status.textContent='Kleidung erkennen · 1/2';
+ const first=await smartImportBeta('legacy',{silent:true});
+ if(serial!==importSerial)return;
+ status.textContent='Freistellung optimieren · 2/2';
+ const second=await smartImportBeta('fashn',{silent:true});
+ if(serial!==importSerial)return;
+ if(!first&&!second){status.textContent='KI nicht verfügbar · Manuell korrigieren';return}
+ const height=$('cropcanvas').height;
+ smartSuggestions=mergeHybridCandidates(first,second,kind,height);
+ if(first&&second)fashionComparison={serial,old:first,alt:second};
+ else clearFashionComparison();
+ renderSmartSuggestions();
+ const valid=smartSuggestions.filter(c=>tierFromCandidate(c).grade!=='reject').length;
+ const invalid=smartSuggestions.length-valid;
+ status.textContent=valid?valid+' Teil'+(valid===1?'':'e')+' erkannt'+(invalid?' · '+invalid+' unbrauchbar':'')+(second?'':' · Basis-KI'):'Keine brauchbaren Teile · Korrigieren';
 }
 let fashionComparison=null;
 function clearFashionComparison(){
