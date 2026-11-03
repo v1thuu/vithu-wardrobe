@@ -698,25 +698,25 @@ function clearFashionComparison(){
 }
 async function compareFashionParser(){
  if(fashionComparing||smartImportBusy)return;
- if(!sourceImg||mode!=='worn')return toast('Zuerst ein Outfit- oder Model-Foto auswählen');
- const old=smartSuggestions.map(x=>({...x})), serial=importSerial;
- const btn=$('fashnCompareButton');btn.disabled=true;
- fashionComparing=true;
- const status=$('smartImportStatus');status.style.display='block';
- status.textContent='Zusätzliches FASHN-Modell wird geladen (ca. 67 MB). WLAN empfohlen …';
- try{
-  await smartImportBeta('fashn');
-  if(serial!==importSerial)return
-  const alt=smartSuggestions.map(x=>({...x,source:'fashn-q8'}));
-  smartSuggestions=old;renderSmartSuggestions();
-  if(!alt.length){status.textContent='FASHN hat keinen geeigneten Kleidungsbereich erkannt. Das bisherige Ergebnis bleibt erhalten.';return}
-  fashionComparison={serial,old,alt};
-  renderFashionComparison();
-  status.textContent='FASHN-Vergleich fertig. Bitte beide Masken vergleichen und nur sichtbar bessere Vorschläge übernehmen.';
- }catch(e){
-  console.error('Fashion model compare',e);smartSuggestions=old;renderSmartSuggestions();
-  status.textContent='FASHN konnte auf diesem Gerät nicht ausgeführt werden: '+(e?.message||'Fehler')+'. Das bisherige Ergebnis bleibt erhalten.';
- }finally{fashionComparing=false;btn.disabled=false}
+ if(!sourceImg||mode!=='worn')return toast('Zuerst Outfitfoto wählen');
+ const serial=importSerial,status=$('smartImportStatus');
+ let comparison=fashionComparison?.serial===serial?fashionComparison:null;
+ if(!comparison){
+  const old=smartSuggestions.map(x=>({...x})),btn=$('fashnCompareButton');
+  fashionComparing=true;if(btn)btn.disabled=true;
+  try{
+   status.textContent='Zusatzmodell laden …';
+   const alt=await smartImportBeta('fashn',{silent:true});
+   if(serial!==importSerial)return;
+   if(!alt)throw new Error('Modell nicht verfügbar');
+   comparison={serial,old,alt};fashionComparison=comparison;
+  }catch(e){console.error(e);if(serial===importSerial)status.textContent='Zusatzmodell nicht verfügbar';return}
+  finally{fashionComparing=false;if(btn)btn.disabled=false}
+ }
+ const eligible=comparableHybridCategories(comparison.old,comparison.alt,$('cropcanvas').height);
+ if(!eligible.length){status.textContent='Keine zwei brauchbaren Varianten zum Vergleichen';return}
+ renderFashionComparison();
+ status.textContent=eligible.length+' Vergleich'+(eligible.length===1?'':'e')+' verfügbar';
 }
 function renderFashionComparison(){
  const box=$('fashionComparison');if(!box)return;box.replaceChildren();
@@ -724,7 +724,7 @@ function renderFashionComparison(){
  box.hidden=false;
  const intro=document.createElement('p');intro.textContent='Zwei verschiedene Modelle, gleiche Originalaufnahme. Kein Qualitätsgewinn behauptet: vergleiche Kragen, Ärmel, Hautreste, Saum und Hose selbst.';
  box.append(intro);
- const categories=[...new Set([...fashionComparison.old,...fashionComparison.alt].map(c=>c.category))];
+ const categories=comparableHybridCategories(fashionComparison.old,fashionComparison.alt,$('cropcanvas').height);
  for(const category of categories){
   const older=fashionComparison.old.find(c=>c.category===category);
   const newer=fashionComparison.alt.find(c=>c.category===category);
@@ -751,12 +751,12 @@ function applyFashionCandidate(category,row){
  const test=fashionComparison;
  if(!test||test.serial!==importSerial)return toast('Der Import hat sich geändert. Bitte neu vergleichen.');
  const newItem=test.alt.find(c=>c.category===category);
- if(!newItem)return;
+ if(!newItem||!comparableHybridCategories(test.old,test.alt,$('cropcanvas').height).includes(category))return;
  const index=smartSuggestions.findIndex(c=>c.category===category);
  // Keep the original source for reversible correction. Never merge 2 photos.
  const candidate={...newItem,id:index<0?uid():smartSuggestions[index].id,
-  qualityTried:true,warning:'Neue KI-Maske – Kragen, Hände und Saum unbedingt prüfen.',
-  reviewNeeded:true};
+  qualityTried:true,warning:'Alternative gewählt – bitte prüfen',reviewNeeded:true,
+  hybridInvalid:false,hybridReview:true,hybridReason:'Alternative gewählt – bitte prüfen'};
  if(index<0)smartSuggestions.push(candidate);else smartSuggestions[index]=candidate;
  renderSmartSuggestions();row.remove();toast('Neue KI-Maske übernommen – bitte prüfen');
 }
@@ -872,9 +872,10 @@ function renderSmartSuggestions(){
   const d=document.createElement('div');d.className='details';
   const name=document.createElement('strong');name.textContent=cats[s.category]||s.name;
   const hint=document.createElement('div');hint.className='meta';
-  hint.textContent=s.grade==='ready'?'✓ Bereit':s.grade==='review'?'⚠ '+(s.clipped?'Bildrand abgeschnitten':'Bitte prüfen'):'⛔ Fehlerhafte Erkennung';
+  hint.textContent=s.grade==='ready'?'✓ Bereit':s.grade==='review'?'⚠ '+(s.clipped?'Bildrand abgeschnitten':'Bitte prüfen'):'⛔ Kein brauchbarer Vorschlag';
   const actions=document.createElement('div');actions.className='btnrow';
-  const save=document.createElement('button');save.textContent=s.grade==='ready'?'✓ Speichern':'Nach Prüfung speichern';
+  const save=document.createElement('button');save.textContent=s.grade==='ready'?'✓ Speichern':s.grade==='reject'?'Unbrauchbar':'Nach Prüfung speichern';
+  if(s.grade==='reject')save.disabled=true;
   save.className=s.grade==='ready'?'':'secondary';
   save.onclick=()=>saveSuggestion(i);
   const refine=document.createElement('button');refine.className='secondary';refine.textContent='✏️ Korrigieren';refine.onclick=()=>refineSuggestion(i);
@@ -882,7 +883,7 @@ function renderSmartSuggestions(){
   if(s.source!=='shop-auto'){
    const quality=document.createElement('button');
    quality.className='secondary smart-quality-btn';
-   quality.textContent=s.qualityTried?'↻ Nochmals präzise analysieren':'✨ Präziser ausschneiden';
+   quality.textContent='Nochmals analysieren';
    quality.onclick=()=>compareFocusedCutout(i);
    d.append(name,hint,actions);el._qualityButton=quality;
   }
@@ -900,14 +901,14 @@ function renderSmartSuggestions(){
  smartSuggestions.forEach((s,i)=>{if(s.grade==='ready')section(grid,s,i)});
  if(questionable.length){
   const details=document.createElement('details');details.className='smart-review-folder';
-  const summary=document.createElement('summary');summary.textContent='⚠️ '+questionable.length+' Teil'+(questionable.length===1?'':'e')+' prüfen';
+  const summary=document.createElement('summary');summary.textContent='⚠ '+questionable.length+' Teil'+(questionable.length===1?'':'e')+' prüfen';
   const cards=document.createElement('div');cards.className='grid smart-review-grid';
   smartSuggestions.forEach((s,i)=>{if(s.grade==='review')section(cards,s,i)});
   details.append(summary,cards);grid.append(details);
  }
  if(rejected.length){
   const box=document.createElement('details');box.className='smart-review-folder smart-reject-folder';
-  const title=document.createElement('summary');title.textContent='⛔ '+rejected.length+' Fehl-Erkennung'+(rejected.length===1?'':'en');
+  const title=document.createElement('summary');title.textContent='⛔ '+rejected.length+' unbrauchbar';
   const cards=document.createElement('div');cards.className='grid smart-review-grid';
   smartSuggestions.forEach((s,i)=>{if(s.grade==='reject')section(cards,s,i)});
   box.append(title,cards);grid.append(box);
