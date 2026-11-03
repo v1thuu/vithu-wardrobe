@@ -784,7 +784,7 @@ function renderSmartSuggestions(){
  const grid=$('smartImportGrid');if(!grid)return;grid.replaceChildren();
  const safe=smartSuggestions.filter(x=>x.grade==='ready');
  $('saveAllSuggestions').style.display=safe.length?'inline-flex':'none';
- $('saveAllSuggestions').textContent='✓ '+safe.length+' ausgewählte'+(safe.length===1?'s Teil':' Teile')+' speichern';
+ $('saveAllSuggestions').textContent='✓ '+safe.length+' Teil'+(safe.length===1?'':'e')+' speichern';
  const questionable=smartSuggestions.filter(x=>x.grade==='review');
  const rejected=smartSuggestions.filter(x=>x.grade==='reject');
  const section=(parent,s,i)=>{
@@ -793,9 +793,9 @@ function renderSmartSuggestions(){
   const d=document.createElement('div');d.className='details';
   const name=document.createElement('strong');name.textContent=cats[s.category]||s.name;
   const hint=document.createElement('div');hint.className='meta';
-  hint.textContent=(s.grade==='ready'?'✓ Bereit · ':s.grade==='review'?'⚠ Prüfen · ':'⛔ Ungeeignet · ')+(s.qualityReason||'Bild prüfen');
+  hint.textContent=s.grade==='ready'?'✓ Bereit':s.grade==='review'?'⚠ '+(s.clipped?'Bildrand abgeschnitten':'Bitte prüfen'):'⛔ Fehlerhafte Erkennung';
   const actions=document.createElement('div');actions.className='btnrow';
-  const save=document.createElement('button');save.textContent=s.grade==='ready'?'✓ Speichern':'Trotzdem speichern';
+  const save=document.createElement('button');save.textContent=s.grade==='ready'?'✓ Speichern':'Nach Prüfung speichern';
   save.className=s.grade==='ready'?'':'secondary';
   save.onclick=()=>saveSuggestion(i);
   const refine=document.createElement('button');refine.className='secondary';refine.textContent='✏️ Korrigieren';refine.onclick=()=>refineSuggestion(i);
@@ -808,7 +808,7 @@ function renderSmartSuggestions(){
    d.append(name,hint,actions);el._qualityButton=quality;
   }
   const more=document.createElement('details');more.className='smart-details';
-  const summary=document.createElement('summary');summary.textContent='Name / Kategorie ändern oder verwerfen';
+  const summary=document.createElement('summary');summary.textContent='Weitere Optionen';
   const labelName=document.createElement('label');labelName.className='f';labelName.textContent='Bezeichnung';
   const input=document.createElement('input');input.id='sg-name-'+i;input.value=s.name;labelName.append(input);
   const labelCat=document.createElement('label');labelCat.className='f';labelCat.textContent='Kategorie';
@@ -821,14 +821,14 @@ function renderSmartSuggestions(){
  smartSuggestions.forEach((s,i)=>{if(s.grade==='ready')section(grid,s,i)});
  if(questionable.length){
   const details=document.createElement('details');details.className='smart-review-folder';
-  const summary=document.createElement('summary');summary.textContent='⚠️ '+questionable.length+' mögliche Fehl-Erkennung'+(questionable.length===1?'':'en')+' prüfen (z. B. Arm statt Hose)';
+  const summary=document.createElement('summary');summary.textContent='⚠️ '+questionable.length+' Teil'+(questionable.length===1?'':'e')+' prüfen';
   const cards=document.createElement('div');cards.className='grid smart-review-grid';
   smartSuggestions.forEach((s,i)=>{if(s.grade==='review')section(cards,s,i)});
   details.append(summary,cards);grid.append(details);
  }
  if(rejected.length){
   const box=document.createElement('details');box.className='smart-review-folder smart-reject-folder';
-  const title=document.createElement('summary');title.textContent='⛔ '+rejected.length+' ungeeignete Erkennung(en) · optional prüfen';
+  const title=document.createElement('summary');title.textContent='⛔ '+rejected.length+' Fehl-Erkennung'+(rejected.length===1?'':'en');
   const cards=document.createElement('div');cards.className='grid smart-review-grid';
   smartSuggestions.forEach((s,i)=>{if(s.grade==='reject')section(cards,s,i)});
   box.append(title,cards);grid.append(box);
