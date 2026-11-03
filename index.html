@@ -83,13 +83,14 @@
 .quality-compare p{font-size:12px;color:#c5cfc5;line-height:1.55}
 .smart-quality-btn{display:block;width:100%;margin:8px 0!important;font-size:12px!important}
 @media(max-width:480px){.quality-comparison{gap:6px}.quality-comparison img{aspect-ratio:3/4}.quality-compare-inner{padding:12px}.quality-comparison figcaption{font-size:10px}}
+.smart-reject-folder{border-color:#85515a;background:#2b2025}.smart-reject-folder summary{color:#ffd3d9}.quality-benchmark{border:1px solid #424c43;border-radius:14px;padding:12px;margin:16px 0}.quality-benchmark summary{cursor:pointer;font-size:12px;color:#d5e0d5;font-weight:700}.quality-benchmark p{font-size:11px;color:#adbaae;margin:5px 0}.quality-tiers{font-size:12px;color:#ced7c9;padding:10px 0}
 </style></head><body>
 <header><div><div class="eyebrow">YOUR PERSONAL STYLE LAB</div><h1>VITHU <span>WARDROBE</span> <small>V3.7 · CLOSET QUALITY BETA</small></h1><p>Dein kostenloser Kleiderschrank – Bilder bleiben lokal, keine bezahlte KI-API.</p></div><div class="btnrow"><button class="secondary" onclick="exportBackup()">↓ Backup</button><label class="filebutton secondary">↑ Backup laden<input type="file" accept="application/json,.json" onchange="importBackup(event)"></label></div></header>
 <div class="layout"><section class="closet-hero wide"><div><span class="closet-kicker">DEIN DIGITALER KLEIDERSCHRANK</span><h2>Deine Kleidung. Alles an einem Ort.</h2><p>Foto auswählen, Kleidungsstücke erkennen lassen, speichern. Den Rest hältst du einfach.</p></div><button class="closet-add" onclick="openImport()">＋ Kleidung hinzufügen</button></section><section class="panel wide closet-shelf" id="closetShelf"><div class="sectionHead"><h2>Mein Kleiderschrank</h2><span class="chip" id="count">0 Teile</span></div><div class="inv-tools"><input type="search" placeholder="🔎 Kleidung suchen" aria-label="Inventar durchsuchen" oninput="inventorySearch=this.value.toLocaleLowerCase('de');render()"><select aria-label="Sortierung" onchange="inventorySort=this.value;render()"><option value="new">Neueste</option><option value="old">Älteste</option><option value="name">Name A–Z</option><option value="favorites">Favoriten</option></select></div><div id="invSummary" class="inv-summary"></div><div class="inv-catbar" id="invCatbar"></div><div class="grid inv-grid" id="grid"></div><details class="closet-advanced closet-display-settings"><summary>Darstellungsoptionen · Clean-Bilder aktualisieren</summary><div class="btnrow" style="margin:12px 0"><button class="secondary" onclick="buildAllShopLooks()" id="shopAllBtn">✨ Auto Clean für gesamte Garderobe</button></div><p class="muted">Produktansichten werden lokal erzeugt: neutraler Hintergrund, stärkere Zentrierung, leicht geglättete Kanten und etwas cleanerer Studio-Look. Das Original bleibt unverändert und wird weiterhin auf dem Avatar verwendet. Keine generative KI, keine echte Faltenrekonstruktion.</p></details></section><section class="panel wide closet-import" id="importPanel" hidden><div class="sectionHead"><h2>Neues Kleidungsstück hinzufügen</h2><button class="secondary" onclick="closeImport()">✕ Schliessen</button></div><p class="muted">Ein Foto – zwei passende Verfahren. Shop-Produktbilder erhalten eine schnelle Hintergrundfreistellung; Outfitfotos erkennt die lokale KI in einzelnen Kleidungsstücken.</p>
 <div class="import-route"><span id="routeStatus" aria-live="polite">Automatische Fotoerkennung bereit</span><details id="routeOptions"><summary>Falscher Bildtyp? Ändern</summary><div class="tabs"><button id="mode-auto" class="active" onclick="setMode('auto');retrySmartRoute()">Automatisch</button><button id="mode-single" class="secondary" onclick="setMode('single');retrySmartRoute()">Produktfotos</button><button id="mode-worn" class="secondary" onclick="setMode('worn');retrySmartRoute()">Outfitfoto</button></div></details></div>
 <label class="f closet-file">Foto aus deiner Galerie wählen<input id="upload" type="file" accept="image/*" onchange="onPhoto(event)"></label><p class="muted">Die Verarbeitung läuft im Browser. Outfit-KI lädt beim ersten Einsatz ein kostenloses Modell. Einfache Produktfotos werden ohne Modell-Download freigestellt. Komplexe Shop-Screenshots benötigen eventuell manuelle Korrektur.</p>
 <div class="btnrow closet-retry"><button class="secondary" id="smartImportBtn" onclick="smartImportBeta()">↻ Analyse erneut starten</button></div>
-<div class="cropbox" id="smartImportBox"><p id="smartImportStatus" class="notice" style="display:none"></p><div class="grid" id="smartImportGrid"></div><div class="btnrow"><button id="saveAllSuggestions" class="secondary" onclick="saveAllSuggestions()">✓ Alle geprüften Teile speichern</button></div></div>
+<div class="cropbox" id="smartImportBox"><p id="smartImportStatus" class="notice" style="display:none"></p><p class="quality-tiers">✓ Bereit · ⚠ Prüfen · ⛔ Ungeeignet. Plausibilitätsprüfung, keine garantierte KI-Trefferquote.</p><div class="grid" id="smartImportGrid"></div><details class="quality-benchmark"><summary>Diagnose · Modell-Laufzeiten</summary><div id="qualityBenchBody"><p>Noch keine Analyse.</p></div><p>Laufzeiten und Maskenflächen messen nicht die Erkennungsgenauigkeit.</p></details><div class="btnrow"><button id="saveAllSuggestions" class="secondary" onclick="saveAllSuggestions()">✓ Alle geprüften Teile speichern</button></div></div>
 <details class="closet-advanced" id="manualTools"><summary>Manuell ausschneiden / weitere Werkzeuge</summary><div class="cropbox" id="cropbox">
 <p id="cropstatus" class="notice" style="display:none"></p>
 <p class="muted crophelp">1. <b>Markieren:</b> Ziehe einmal einen Rahmen. Danach kannst du ihn direkt verschieben oder an den grünen Eckpunkten skalieren. 2. <b>Foto verschieben:</b> Bewege ein vergrössertes Foto. 3. <b>Rahmen anpassen:</b> Tippe auf „Ecken anpassen“ und ziehe am Rahmen. 4. Speichere das Teil und markiere das nächste im gleichen Bild.</p>
@@ -250,16 +251,17 @@ function inspectPhotoForRoute(){
  const mean=[sr/n,sg/n,sb/n],stdev=Math.sqrt(Math.max(0,(r2+g2+b2)/n-(mean[0]**2+mean[1]**2+mean[2]**2)));
  const coverage=transparent/n;
  const uniform=stdev<19&&light/n>206;
- return {type:coverage>.18?'transparent':uniform?'product':'outfit',mean,stdev,light:light/n,coverage,uniform};
+ const neutralStudio=stdev<26&&light/n>92&&Math.max(...mean)-Math.min(...mean)<24;
+ return {type:coverage>.18?'transparent':uniform?'product':neutralStudio?'model':'outfit',mean,stdev,light:light/n,coverage,uniform,neutralStudio};
 }
 async function runSmartRoute(serial){
  if(!sourceImg||serial!==importSerial)return;
  const stats=inspectPhotoForRoute();
- const route=importMode==='auto'?stats.type==='outfit'?'worn':'single':importMode;
+ const route=importMode==='auto'?(stats.type==='product'||stats.type==='transparent'?'single':'worn'):importMode;
  setMode(importMode);
  $('routeStatus').textContent=route==='single'
   ?(stats.type==='transparent'?'✓ Transparentes Produktbild erkannt':'✓ Produktfoto-Verarbeitung')
-  :'✓ Outfitfoto · KI erkennt einzelne Teile';
+  :stats.type==='model'?'✓ Shopfoto am Model · Kleidungsstücke erkennen':'✓ Outfitfoto · KI erkennt einzelne Teile';
  $('smartImportBox').style.display='block';$('smartImportStatus').style.display='block';
  if(route==='single'){
   await smartProductImport(stats,serial);
@@ -306,6 +308,7 @@ function productMaskFromImage(stats){
  return {mask,warning:frac<.08?'Kleines oder sehr helles Produkt – Rand bitte prüfen.':'',source:'product'};
 }
 async function smartProductImport(stats,serial){
+ const productStart=performance.now();
  const status=$('smartImportStatus');status.textContent='Shop-Produktbild wird lokal freigestellt …';
  try{
   const c=$('cropcanvas'),w=c.width,h=c.height;
@@ -337,7 +340,7 @@ async function smartProductImport(stats,serial){
   raw.getContext('2d').drawImage(c,x0,y0,sw,sh,0,0,sw,sh);
   const name='Kleidungsstück';
   smartSuggestions=[{id:uid(),category:'top',name,image:crop.toDataURL('image/png'),originalCrop:raw.toDataURL('image/png'),area:bounds.area,source:'shop-auto',warning:result.warning,clipped:bounds.minX<=1||bounds.minY<=1||bounds.maxX>=w-2||bounds.maxY>=h-2}];
-  renderSmartSuggestions();
+  refreshCandidateTiers();renderSmartSuggestions();reportQualityRun({method:'Produkt-Hintergrundmaske',ms:performance.now()-productStart,result:'1 Teil, Kategorie prüfen'});
   status.textContent='Produktbild vorbereitet. Bitte die passende Kategorie wählen. Falls Stoffteile fehlen, „Korrigieren“ antippen oder ein anderes Produktfoto wählen.';
  }catch(e){
   console.error(e);status.textContent='Produkt-Import fehlgeschlagen: '+(e?.message||'Unbekannter Fehler');
@@ -346,6 +349,23 @@ async function smartProductImport(stats,serial){
 }
 
 let garmentParser=null,garmentLoading=null,smartImportBusy=false;
+const qualityRuns=[];
+function reportQualityRun(data){
+ qualityRuns.unshift({at:new Date().toLocaleTimeString('de-CH'),...data});
+ if(qualityRuns.length>16)qualityRuns.length=16;
+ const body=$('qualityBenchBody');if(!body)return;body.replaceChildren();
+ for(const r of qualityRuns){const p=document.createElement('p');p.textContent=`${r.at} · ${r.method} · ${Math.round(r.ms)} ms · ${r.result}`;body.append(p)}
+}
+function tierFromCandidate(s){
+ // Heuristic triage, NOT calibrated model confidence.
+ if(s.quality?.suspicious)return {grade:'reject',reason:'Möglicher Arm statt Hose'};
+ if(s.reviewNeeded)return {grade:'review',reason:s.warning||'Körperbereich überlappt'};
+ if(s.clipped)return {grade:'review',reason:'Am Bildrand abgeschnitten'};
+ if(s.source==='shop-auto')return {grade:'review',reason:'Kategorie prüfen'};
+ return {grade:'ready',reason:'Keine offensichtlichen Probleme gefunden'};
+}
+function refreshCandidateTiers(){for(const s of smartSuggestions){const v=tierFromCandidate(s);s.grade=v.grade;s.qualityReason=v.reason}}
+
 async function getGarmentParser(){
  if(garmentParser)return garmentParser;
  if(!garmentLoading)garmentLoading=(async()=>{
@@ -497,10 +517,10 @@ async function smartImportBeta(){
  smartSuggestions=[];renderSmartSuggestions();
  status.textContent='KI-Modell wird geladen (beim ersten Mal ca. 29 MB). Verarbeitung bleibt auf deinem Gerät …';
  try{
-  const parser=await getGarmentParser();status.textContent='KI analysiert das gesamte Outfit-Foto …';
+  const parser=await getGarmentParser();status.textContent='KI analysiert das gesamte Outfit-Foto …';const analysisStart=performance.now();
   const src=$('cropcanvas'),w=src.width,h=src.height;
   const srcPixels=src.getContext('2d',{willReadFrequently:true}).getImageData(0,0,w,h).data;
-  const results=await parser(src.toDataURL('image/jpeg',.85));
+  const results=await parser(src.toDataURL('image/jpeg',.85));const analysisMs=performance.now()-analysisStart;
   const grouped=new Map();
   const bodyMask=new Uint8Array(w*h);
   const bodyLabels=new Set(['face','left-arm','right-arm','left-leg','right-leg']);
@@ -550,7 +570,8 @@ async function smartImportBeta(){
   // be offered as ordinary ready-to-save garments.
   smartSuggestions=candidates.sort((a,b)=>b.area-a.area).slice(0,6);
   for(const candidate of smartSuggestions){const metric=assessGarmentCandidate(candidate,srcPixels,w,h,bodyMask);candidate.reviewNeeded=metric.reviewNeeded;candidate.warning=metric.warning;candidate.quality=metric;delete candidate.maskForQuality}
-  renderSmartSuggestions();
+  refreshCandidateTiers();renderSmartSuggestions();
+  reportQualityRun({method:'SegFormer B2 · Gesamtbild',ms:analysisMs,result:smartSuggestions.length+' Teile, '+smartSuggestions.filter(x=>x.grade==='ready').length+' unauffällig'});
   const questionable=smartSuggestions.filter(x=>x.reviewNeeded).length;const clipped=smartSuggestions.filter(x=>x.clipped&&!x.reviewNeeded).length;status.textContent=smartSuggestions.length?`${smartSuggestions.length} Bereich(e) erkannt.${questionable?' '+questionable+' mögliche Fehl-Erkennung(en) zur Prüfung.':''}${clipped?' '+clipped+' Teil(e) am Bildrand abgeschnitten.':''} Bitte Vorschau prüfen.`:'Keine ausreichend grossen Kleidungsteile erkannt. Bitte den manuellen Ausschneide-Editor verwenden.';
  }catch(e){console.error(e);status.textContent='KI-Erkennung nicht verfügbar: '+(e?.message||'Unbekannter Fehler')+'. Öffne unten „Manuell ausschneiden“.';$('manualTools').open=true;$('cropbox').style.display='block'}
  finally{smartImportBusy=false;if(btn)btn.disabled=false}
@@ -589,7 +610,7 @@ async function compareFocusedCutout(i){
   const region=document.createElement('canvas');region.width=sw;region.height=sh;
   region.getContext('2d').drawImage(src,x0,y0,sw,sh,0,0,sw,sh);
   const parser=await getGarmentParser();
-  const results=await parser(region.toDataURL('image/jpeg',.91));
+  const modelStart=performance.now();const results=await parser(region.toDataURL('image/jpeg',.91));const modelMs=performance.now()-modelStart;
   if(initialSerial!==importSerial||!smartSuggestions.includes(target))return;
   const mask=new Uint8Array(sw*sh);
   for(const entry of results){
@@ -632,6 +653,7 @@ async function compareFocusedCutout(i){
    frame:{minX:x0+frame.minX,minY:y0+frame.minY,maxX:x0+frame.maxX,maxY:y0+frame.maxY},
    bounds:{...box,minX:x0+box.minX,maxX:x0+box.maxX,minY:y0+box.minY,maxY:y0+box.maxY},
    area:box.area};
+  reportQualityRun({method:'SegFormer B2 · Focus-Crop',ms:modelMs,result:target.category+' · '+box.area+' Maskenpixel'});
   $('qualityBefore').src=target.image;
   $('qualityAfter').src=qualityCandidate.image;
   $('qualityCompareHint').textContent=check.reason+' Die alte Freistellung wird nicht überschrieben, bis du „Neue übernehmen“ wählst.';
@@ -653,21 +675,23 @@ function acceptQualityCompare(){
  closeQualityCompare();renderSmartSuggestions();toast('Neue Freistellung übernommen');
 }
 function renderSmartSuggestions(){
+ refreshCandidateTiers();
  const grid=$('smartImportGrid');if(!grid)return;grid.replaceChildren();
- const safe=smartSuggestions.filter(x=>!x.reviewNeeded);
+ const safe=smartSuggestions.filter(x=>x.grade==='ready');
  $('saveAllSuggestions').style.display=safe.length?'inline-flex':'none';
  $('saveAllSuggestions').textContent='✓ '+safe.length+' ausgewählte'+(safe.length===1?'s Teil':' Teile')+' speichern';
- const questionable=smartSuggestions.filter(x=>x.reviewNeeded);
+ const questionable=smartSuggestions.filter(x=>x.grade==='review');
+ const rejected=smartSuggestions.filter(x=>x.grade==='reject');
  const section=(parent,s,i)=>{
   const el=document.createElement('article');el.className='item smart-card';
   const img=document.createElement('img');img.src=s.image;img.alt='KI-Vorschlag: '+s.name;img.loading='lazy';
   const d=document.createElement('div');d.className='details';
   const name=document.createElement('strong');name.textContent=cats[s.category]||s.name;
   const hint=document.createElement('div');hint.className='meta';
-  hint.textContent=s.warning|| (s.clipped?'⚠ Am Bildrand abgeschnitten':s.source==='shop-auto'?'Shop-Produktfoto · Kategorie prüfen':'Outfitfoto · Bild prüfen');
+  hint.textContent=(s.grade==='ready'?'✓ Bereit · ':s.grade==='review'?'⚠ Prüfen · ':'⛔ Ungeeignet · ')+(s.qualityReason||'Bild prüfen');
   const actions=document.createElement('div');actions.className='btnrow';
-  const save=document.createElement('button');save.textContent=s.reviewNeeded?'Trotzdem speichern':'✓ Speichern';
-  save.className=s.reviewNeeded?'secondary':'';
+  const save=document.createElement('button');save.textContent=s.grade==='ready'?'✓ Speichern':'Trotzdem speichern';
+  save.className=s.grade==='ready'?'':'secondary';
   save.onclick=()=>saveSuggestion(i);
   const refine=document.createElement('button');refine.className='secondary';refine.textContent='✏️ Korrigieren';refine.onclick=()=>refineSuggestion(i);
   actions.append(save,refine);
@@ -676,7 +700,7 @@ function renderSmartSuggestions(){
    quality.className='secondary smart-quality-btn';
    quality.textContent=s.qualityTried?'↻ Nochmals präzise analysieren':'✨ Präziser ausschneiden';
    quality.onclick=()=>compareFocusedCutout(i);
-   d.append(name,hint,actions,quality);
+   d.append(name,hint,actions);el._qualityButton=quality;
   }
   const more=document.createElement('details');more.className='smart-details';
   const summary=document.createElement('summary');summary.textContent='Name / Kategorie ändern oder verwerfen';
@@ -686,16 +710,23 @@ function renderSmartSuggestions(){
   const select=document.createElement('select');select.id='sg-cat-'+i;select.innerHTML=categoryOptions(s.category);labelCat.append(select);
   const discard=document.createElement('button');discard.className='secondary';discard.textContent='Verwerfen';discard.onclick=()=>dropSuggestion(i);
   if(s.source==='shop-auto'){more.append(summary,labelName,discard);d.append(name,hint,labelCat,actions,more)}
-  else{more.append(summary,labelName,labelCat,discard);d.append(more)}
+  else{more.append(summary,labelName,labelCat,discard,el._qualityButton);d.append(more)}
   el.append(img,d);parent.append(el);
  };
- smartSuggestions.forEach((s,i)=>{if(!s.reviewNeeded)section(grid,s,i)});
+ smartSuggestions.forEach((s,i)=>{if(s.grade==='ready')section(grid,s,i)});
  if(questionable.length){
   const details=document.createElement('details');details.className='smart-review-folder';
   const summary=document.createElement('summary');summary.textContent='⚠️ '+questionable.length+' mögliche Fehl-Erkennung'+(questionable.length===1?'':'en')+' prüfen (z. B. Arm statt Hose)';
   const cards=document.createElement('div');cards.className='grid smart-review-grid';
-  smartSuggestions.forEach((s,i)=>{if(s.reviewNeeded)section(cards,s,i)});
+  smartSuggestions.forEach((s,i)=>{if(s.grade==='review')section(cards,s,i)});
   details.append(summary,cards);grid.append(details);
+ }
+ if(rejected.length){
+  const box=document.createElement('details');box.className='smart-review-folder smart-reject-folder';
+  const title=document.createElement('summary');title.textContent='⛔ '+rejected.length+' ungeeignete Erkennung(en) · optional prüfen';
+  const cards=document.createElement('div');cards.className='grid smart-review-grid';
+  smartSuggestions.forEach((s,i)=>{if(s.grade==='reject')section(cards,s,i)});
+  box.append(title,cards);grid.append(box);
  }
 }async function refineSuggestion(i){
  $('importPanel').hidden=false;
@@ -719,10 +750,10 @@ function renderSmartSuggestions(){
   $('cutoutPanel').scrollIntoView({behavior:'smooth',block:'start'});
  }catch(e){alert('Vorschlag konnte nicht geöffnet werden: '+e.message)}
 }
-async function saveSuggestion(i){const s=smartSuggestions[i];if(!s)return;if(s.reviewNeeded&&!confirm('Die KI könnte diesen Bereich falsch erkannt haben (z. B. Arm statt Hose). Trotzdem speichern?'))return;const name=$('sg-name-'+i)?.value?.trim()||s.name;const category=$('sg-cat-'+i)?.value||s.category;const clean=await createCleanProductImage(s.image,category).catch(()=>null);items.unshift({id:uid(),name,category,image:s.image,source:s.source==='shop-auto'?'shop-auto':'worn-auto',clipped:!!s.clipped,shopImage:clean||undefined,showShop:!!clean});smartSuggestions.splice(i,1);await persist();render();renderSmartSuggestions();$('smartImportStatus').textContent=smartSuggestions.length?'Vorschlag gespeichert. Du kannst die restlichen speichern oder verwerfen.':'Alle Vorschläge verarbeitet.';if(!smartSuggestions.length)$('smartImportBox').style.display='none';toast('Vorschlag gespeichert')}
+async function saveSuggestion(i){const s=smartSuggestions[i];if(!s)return;if(tierFromCandidate(s).grade!=='ready'&&!confirm('Bitte prüfen: '+tierFromCandidate(s).reason+'. Trotzdem speichern?'))return;const name=$('sg-name-'+i)?.value?.trim()||s.name;const category=$('sg-cat-'+i)?.value||s.category;const clean=await createCleanProductImage(s.image,category).catch(()=>null);items.unshift({id:uid(),name,category,image:s.image,source:s.source==='shop-auto'?'shop-auto':'worn-auto',clipped:!!s.clipped,shopImage:clean||undefined,showShop:!!clean});smartSuggestions.splice(i,1);await persist();render();renderSmartSuggestions();$('smartImportStatus').textContent=smartSuggestions.length?'Vorschlag gespeichert. Du kannst die restlichen speichern oder verwerfen.':'Alle Vorschläge verarbeitet.';if(!smartSuggestions.length)$('smartImportBox').style.display='none';toast('Vorschlag gespeichert')}
 function dropSuggestion(i){smartSuggestions.splice(i,1);renderSmartSuggestions();$('smartImportStatus').style.display='block';$('smartImportStatus').textContent=smartSuggestions.length?'Vorschlag verworfen.':'Keine Vorschläge mehr vorhanden.';if(!smartSuggestions.length)$('smartImportBox').style.display='none'}
 async function saveAllSuggestions(){
- const approved=smartSuggestions.filter(s=>!s.reviewNeeded);
+ const approved=smartSuggestions.filter(s=>tierFromCandidate(s).grade==='ready');
  if(!approved.length)return toast('Keine unauffälligen Teile zum Speichern');
  for(const s of approved){
   const i=smartSuggestions.indexOf(s),name=$('sg-name-'+i)?.value?.trim()||s.name;
@@ -730,7 +761,7 @@ async function saveAllSuggestions(){
   const clean=await createCleanProductImage(s.image,category).catch(()=>null);
   items.unshift({id:uid(),name,category,image:s.image,source:s.source==='shop-auto'?'shop-auto':'worn-auto',clipped:!!s.clipped,shopImage:clean||undefined,showShop:!!clean});
  }
- smartSuggestions=smartSuggestions.filter(s=>s.reviewNeeded);
+ smartSuggestions=smartSuggestions.filter(s=>tierFromCandidate(s).grade!=='ready');
  await persist();render();renderSmartSuggestions();
  $('smartImportStatus').style.display='block';
  $('smartImportStatus').textContent=approved.length+' unauffällige Teile gespeichert.'+(smartSuggestions.length?' Fragliche Vorschläge bleiben zur manuellen Prüfung.':'');
