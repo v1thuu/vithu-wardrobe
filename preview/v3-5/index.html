@@ -111,12 +111,13 @@ function setMode(v){
 }
 async function retrySmartRoute(){
  if(!sourceImg)return;
+ smartSuggestions=[];renderSmartSuggestions();
  $('manualTools').open=false;$('cropbox').style.display='none';
  await runSmartRoute(++importSerial);
 }
 async function onPhoto(e){
  const file=e.target.files&&e.target.files[0];if(!file)return;
- openImport();const serial=++importSerial;
+ setMode('auto');openImport();const serial=++importSerial;
  const cb=$('cropbox');cb.style.display='none';
  $('smartImportBox').style.display='block';$('smartImportStatus').style.display='block';
  $('smartImportStatus').textContent='Foto wird vorbereitet …';
