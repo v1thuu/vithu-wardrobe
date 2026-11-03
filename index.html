@@ -549,15 +549,17 @@ function assessGarmentCandidate(candidate,pixels,w,h,bodyMask){
 async function smartImportBeta(engine='legacy'){
  if(smartImportBusy)return;
  if(!sourceImg||mode!=='worn')return toast('Zuerst ein Outfit-Foto auswählen');
+ const jobSerial=importSerial;
  const status=$('smartImportStatus'),box=$('smartImportBox');box.style.display='block';status.style.display='block';
  const btn=$('smartImportBtn');smartImportBusy=true;if(btn)btn.disabled=true;
  smartSuggestions=[];renderSmartSuggestions();
  status.textContent='KI-Modell wird geladen (beim ersten Mal ca. 29 MB). Verarbeitung bleibt auf deinem Gerät …';
  try{
-  const parser=engine==='fashn'?await getFashionParser():await getGarmentParser();status.textContent=engine==='fashn'?'FASHN Human Parser analysiert das Foto …':'KI analysiert das gesamte Outfit-Foto …';const analysisStart=performance.now();
+  const parser=engine==='fashn'?await getFashionParser():await getGarmentParser();if(jobSerial!==importSerial)return;status.textContent=engine==='fashn'?'FASHN Human Parser analysiert das Foto …':'KI analysiert das gesamte Outfit-Foto …';const analysisStart=performance.now();
   const src=$('cropcanvas'),w=src.width,h=src.height;
   const srcPixels=src.getContext('2d',{willReadFrequently:true}).getImageData(0,0,w,h).data;
   const results=await parser(src.toDataURL('image/jpeg',.85));const analysisMs=performance.now()-analysisStart;
+  if(jobSerial!==importSerial)return;
   const grouped=new Map();
   const bodyMask=new Uint8Array(w*h);
   const bodyLabels=engine==='fashn'?new Set(['face','arms','hands','legs','feet','torso']):new Set(['face','left-arm','right-arm','left-leg','right-leg']);
@@ -610,7 +612,7 @@ async function smartImportBeta(engine='legacy'){
   refreshCandidateTiers();renderSmartSuggestions();
   reportQualityRun({method:engine==='fashn'?'FASHN SegFormer B4 q8':'SegFormer B2 · Gesamtbild',ms:analysisMs,result:smartSuggestions.length+' Teile, '+smartSuggestions.filter(x=>x.grade==='ready').length+' unauffällig'});
   const questionable=smartSuggestions.filter(x=>x.reviewNeeded).length;const clipped=smartSuggestions.filter(x=>x.clipped&&!x.reviewNeeded).length;status.textContent=smartSuggestions.length?`${smartSuggestions.length} Bereich(e) erkannt.${questionable?' '+questionable+' mögliche Fehl-Erkennung(en) zur Prüfung.':''}${clipped?' '+clipped+' Teil(e) am Bildrand abgeschnitten.':''} Bitte Vorschau prüfen.`:'Keine ausreichend grossen Kleidungsteile erkannt. Bitte den manuellen Ausschneide-Editor verwenden.';
- }catch(e){console.error(e);status.textContent='KI-Erkennung nicht verfügbar: '+(e?.message||'Unbekannter Fehler')+'. Öffne unten „Manuell ausschneiden“.';$('manualTools').open=true;$('cropbox').style.display='block'}
+ }catch(e){console.error(e);if(jobSerial===importSerial){status.textContent='KI-Erkennung nicht verfügbar: '+(e?.message||'Unbekannter Fehler')+'. Öffne unten „Manuell ausschneiden“.';$('manualTools').open=true;$('cropbox').style.display='block'}}
  finally{smartImportBusy=false;if(btn)btn.disabled=false}
 }
 let fashionComparison=null;
@@ -629,7 +631,7 @@ async function compareFashionParser(){
  status.textContent='Zusätzliches FASHN-Modell wird geladen (ca. 67 MB). WLAN empfohlen …';
  try{
   await smartImportBeta('fashn');
-  if(serial!==importSerial){smartSuggestions=old;renderSmartSuggestions();return}
+  if(serial!==importSerial)return
   const alt=smartSuggestions.map(x=>({...x,source:'fashn-q8'}));
   smartSuggestions=old;renderSmartSuggestions();
   if(!alt.length){status.textContent='FASHN hat keinen geeigneten Kleidungsbereich erkannt. Das bisherige Ergebnis bleibt erhalten.';return}
