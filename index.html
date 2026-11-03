@@ -230,7 +230,7 @@ function openImport(){const panel=$('importPanel');panel.hidden=false;panel.scro
 function closeImport(){$('importPanel').hidden=true}
 let closetAvatarVisible=false;
 function toggleClosetAvatar(){closetAvatarVisible=!closetAvatarVisible;$('avatarFold').hidden=!closetAvatarVisible;$('avatarToggle').textContent=closetAvatarVisible?'Avatar ausblenden':'Avatar anzeigen'}
-function showManualTools(){const d=$('manualTools');d.open=true;$('cropbox').style.display='block';d.scrollIntoView({behavior:'smooth',block:'start'})}
+function showManualTools(){$('closetAdvancedOptions').open=true;const d=$('manualTools');d.open=true;$('cropbox').style.display='block';d.scrollIntoView({behavior:'smooth',block:'start'})}
 // Unified V3.5 import. Auto mode is deliberately conservative: uncertain photos
 // use the outfit parser, and the user can correct the route with one tap.
 let importMode='auto',importSerial=0;
@@ -247,7 +247,7 @@ async function retrySmartRoute(){
  await runSmartRoute(++importSerial);
 }
 async function onPhoto(e){
- clearFashionComparison();
+ clearFashionComparison();$('closetAdvancedOptions').open=false;
  const file=e.target.files&&e.target.files[0];if(!file)return;
  const selectedName=$('selectedPhotoName');if(selectedName)selectedName.textContent=file.name;
  setMode('auto');setHybridKind('auto',false);openImport();const serial=++importSerial;
@@ -948,7 +948,7 @@ function renderSmartSuggestions(){
   box.append(title,cards);grid.append(box);
  }
 }async function refineSuggestion(i){
- $('importPanel').hidden=false;
+ $('importPanel').hidden=false;$('closetAdvancedOptions').open=true;
  const s=smartSuggestions[i];if(!s)return;
  for(let j=0;j<smartSuggestions.length;j++){const cur=smartSuggestions[j];cur.name=$('sg-name-'+j)?.value.trim()||cur.name;cur.category=$('sg-cat-'+j)?.value||cur.category}
  try{
@@ -1097,8 +1097,8 @@ fig.addEventListener('pointermove',e=>{if(e.pointerType==='touch'||!wearGesture)
 let cutOriginal=null,cutData=null,cutHistory=[],cutTool='region',cutDrag=false,cutLast=null,refineSuggestionId=null;
 function cutMode(tool){cutTool=tool;[['region','eraseRegion'],['erase','eraseBrush'],['restore','restoreBrush']].forEach(([k,id])=>$(id).className=k===tool?'active':'secondary');$('cutoutStatus').textContent=tool==='region'?'Auf einen zusammenhängenden Hintergrundbereich tippen.':tool==='erase'?'Mit dem Finger störende Reste wegradieren.':'Mit dem Finger versehentlich entfernte Bereiche wiederherstellen.'}
 function drawCut(){if(!cutData)return;const c=$('cutoutCanvas');c.getContext('2d').putImageData(cutData,0,0)}
-function openCutout(){refineSuggestionId=null;$('cutoutSaveButton').textContent='✓ Freigestelltes PNG speichern';$('cutoutCancelButton').textContent='Ohne Freistellen zurück';if(!sourceImg)return toast('Bitte Foto auswählen');if(mode==='worn'&&(!crop||crop.w<12||crop.h<12))return alert('Zuerst den grünen Rahmen um das Kleidungsstück ziehen.');const src=$('cropcanvas'),canvas=$('cutoutCanvas');let x=0,y=0,w=src.width,h=src.height;if(mode==='worn'){x=crop.x;y=crop.y;w=crop.w;h=crop.h}const factor=Math.min(1,640/Math.max(w,h));canvas.width=Math.max(1,Math.round(w*factor));canvas.height=Math.max(1,Math.round(h*factor));const ctx=canvas.getContext('2d',{willReadFrequently:true});if(mode==='worn')ctx.drawImage(src,x,y,w,h,0,0,canvas.width,canvas.height);else ctx.drawImage(sourceImg,0,0,canvas.width,canvas.height);cutOriginal=ctx.getImageData(0,0,canvas.width,canvas.height);cutData=ctx.getImageData(0,0,canvas.width,canvas.height);cutHistory=[];cutMode('region');drawCut();$('cutoutStatus').textContent='Du kannst manuell freistellen oder „KI freistellen (kostenlos)“ testen. Danach bei Bedarf mit Restpixel säubern nacharbeiten.';$('cutoutPanel').style.display='block';$('cutoutPanel').scrollIntoView({block:'start',behavior:'smooth'})}
-function closeCutout(){refineSuggestionId=null;$('cutoutSaveButton').textContent='✓ Freigestelltes PNG speichern';$('cutoutCancelButton').textContent='Ohne Freistellen zurück';$('cutoutPanel').style.display='none';cutData=null;cutOriginal=null;cutHistory=[]}
+function openCutout(){$('closetAdvancedOptions').open=true;refineSuggestionId=null;$('cutoutSaveButton').textContent='✓ Übernehmen';$('cutoutCancelButton').textContent='Abbrechen';if(!sourceImg)return toast('Bitte Foto auswählen');if(mode==='worn'&&(!crop||crop.w<12||crop.h<12))return alert('Zuerst den grünen Rahmen um das Kleidungsstück ziehen.');const src=$('cropcanvas'),canvas=$('cutoutCanvas');let x=0,y=0,w=src.width,h=src.height;if(mode==='worn'){x=crop.x;y=crop.y;w=crop.w;h=crop.h}const factor=Math.min(1,640/Math.max(w,h));canvas.width=Math.max(1,Math.round(w*factor));canvas.height=Math.max(1,Math.round(h*factor));const ctx=canvas.getContext('2d',{willReadFrequently:true});if(mode==='worn')ctx.drawImage(src,x,y,w,h,0,0,canvas.width,canvas.height);else ctx.drawImage(sourceImg,0,0,canvas.width,canvas.height);cutOriginal=ctx.getImageData(0,0,canvas.width,canvas.height);cutData=ctx.getImageData(0,0,canvas.width,canvas.height);cutHistory=[];cutMode('region');drawCut();$('cutoutStatus').textContent='Du kannst manuell freistellen oder „KI freistellen (kostenlos)“ testen. Danach bei Bedarf mit Restpixel säubern nacharbeiten.';$('cutoutPanel').style.display='block';$('cutoutPanel').scrollIntoView({block:'start',behavior:'smooth'})}
+function closeCutout(){refineSuggestionId=null;$('cutoutSaveButton').textContent='✓ Übernehmen';$('cutoutCancelButton').textContent='Abbrechen';$('cutoutPanel').style.display='none';cutData=null;cutOriginal=null;cutHistory=[]}
 function cutSnapshot(){if(!cutData)return;cutHistory.push(new Uint8ClampedArray(cutData.data));if(cutHistory.length>18)cutHistory.shift()}
 function cutUndo(){if(!cutHistory.length)return toast('Keine Änderung zum Rückgängigmachen');cutData.data.set(cutHistory.pop());drawCut()}
 function cutReset(){if(!cutOriginal)return;cutSnapshot();cutData.data.set(cutOriginal.data);drawCut();$('cutoutStatus').textContent='Auf Original zurückgesetzt.'}
