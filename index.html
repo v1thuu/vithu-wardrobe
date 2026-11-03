@@ -98,6 +98,16 @@
 .model-ab-choice button{flex:1}
 @media(max-width:480px){.model-ab-images img{height:150px}}
 .closet-import .sectionHead{align-items:center}.closet-import .sectionHead h2{font-size:21px}.closet-file{margin:10px 0 4px}.closet-import .import-route{margin:8px 0}.closet-extras{margin:10px 0;border:1px solid #3a413d;border-radius:12px;padding:10px 12px}.closet-extras>summary{cursor:pointer;font-size:13px;font-weight:600;color:#a9cfa7}.closet-import .model-lab,.closet-import .quality-benchmark{margin:8px 0}.closet-import .smart-card .meta{font-size:12px;line-height:1.35}.closet-import .smart-card .btnrow{margin-top:8px}.closet-import .smart-review-folder{margin:8px 0}.closet-import .closet-extras .closet-extras{margin-top:8px}
+
+@media (max-width:700px){
+ .closet-import #smartImportGrid{display:flex;flex-direction:column;gap:12px}
+ .closet-import #smartImportGrid>.smart-card{display:grid;grid-template-columns:minmax(0,43%) minmax(0,1fr);align-items:stretch}
+ .closet-import #smartImportGrid>.smart-card>img{height:100%;min-height:204px;max-height:275px;object-fit:contain}
+ .closet-import #smartImportGrid>.smart-card .details{padding:12px 10px;display:flex;flex-direction:column;justify-content:center;min-width:0}
+ .closet-import #smartImportGrid>.smart-card .btnrow{display:flex;flex-direction:column;gap:7px!important}
+ .closet-import #smartImportGrid>.smart-card .btnrow button{width:100%;font-size:12px;white-space:normal}
+ .closet-import #smartImportGrid>.smart-card .smart-details{margin-top:8px}
+}
 </style></head><body>
 <header><div><div class="eyebrow">YOUR PERSONAL STYLE LAB</div><h1>VITHU <span>WARDROBE</span> <small>V3.10 · HYBRID IMPORT BETA</small></h1><p>Dein kostenloser Kleiderschrank – Bilder bleiben lokal, keine bezahlte KI-API.</p></div><div class="btnrow"><button class="secondary" onclick="exportBackup()">↓ Backup</button><label class="filebutton secondary">↑ Backup laden<input type="file" accept="application/json,.json" onchange="importBackup(event)"></label></div></header>
 <div class="layout"><section class="closet-hero wide"><div><span class="closet-kicker">DEIN DIGITALER KLEIDERSCHRANK</span><h2>Deine Kleidung. Alles an einem Ort.</h2><p>Foto auswählen, Kleidungsstücke erkennen lassen, speichern. Den Rest hältst du einfach.</p></div><button class="closet-add" onclick="openImport()">＋ Kleidung hinzufügen</button></section><section class="panel wide closet-shelf" id="closetShelf"><div class="sectionHead"><h2>Mein Kleiderschrank</h2><span class="chip" id="count">0 Teile</span></div><div class="inv-tools"><input type="search" placeholder="🔎 Kleidung suchen" aria-label="Inventar durchsuchen" oninput="inventorySearch=this.value.toLocaleLowerCase('de');render()"><select aria-label="Sortierung" onchange="inventorySort=this.value;render()"><option value="new">Neueste</option><option value="old">Älteste</option><option value="name">Name A–Z</option><option value="favorites">Favoriten</option></select></div><div id="invSummary" class="inv-summary"></div><div class="inv-catbar" id="invCatbar"></div><div class="grid inv-grid" id="grid"></div><details class="closet-advanced closet-display-settings"><summary>Darstellungsoptionen · Clean-Bilder aktualisieren</summary><div class="btnrow" style="margin:12px 0"><button class="secondary" onclick="buildAllShopLooks()" id="shopAllBtn">✨ Auto Clean für gesamte Garderobe</button></div><p class="muted">Produktansichten werden lokal erzeugt: neutraler Hintergrund, stärkere Zentrierung, leicht geglättete Kanten und etwas cleanerer Studio-Look. Das Original bleibt unverändert und wird weiterhin auf dem Avatar verwendet. Keine generative KI, keine echte Faltenrekonstruktion.</p></details></section><section class="panel wide closet-import" id="importPanel" hidden><div class="sectionHead"><h2>Kleidung hinzufügen</h2><button class="secondary" onclick="closeImport()">✕</button></div>
@@ -235,8 +245,9 @@ async function onPhoto(e){
  $('smartImportStatus').textContent='Foto wird vorbereitet …';
  smartSuggestions=[];renderSmartSuggestions();
  try{
-  sourceImg=await imageFromFile(file);
+  const loadedPhoto=await imageFromFile(file);
   if(serial!==importSerial)return;
+  sourceImg=loadedPhoto;
   $('itemName').value='';crop=null;
   const c=$('cropcanvas'),r=Math.min(1,850/Math.max(sourceImg.width,sourceImg.height));
   c.width=Math.max(1,Math.round(sourceImg.width*r));c.height=Math.max(1,Math.round(sourceImg.height*r));
@@ -672,7 +683,18 @@ function comparableHybridCategories(b2,b4,h){
   return hybridCandidateVerdict(a,category,h).ok&&hybridCandidateVerdict(b,category,h).ok;
  });
 }
+let hybridImportQueue=Promise.resolve();
 async function runHybridImport(serial,stats){
+ const before=hybridImportQueue;
+ let release;
+ hybridImportQueue=new Promise(resolve=>{release=resolve});
+ await before.catch(()=>{});
+ try{
+ if(serial!==importSerial)return;
+ while(smartImportBusy){
+  await new Promise(resolve=>setTimeout(resolve,120));
+  if(serial!==importSerial)return;
+ }
  const status=$('smartImportStatus'),kind=chooseHybridKind(stats);
  status.textContent='Kleidung erkennen · 1/2';
  const first=await smartImportBeta('legacy',{silent:true});
@@ -689,6 +711,7 @@ async function runHybridImport(serial,stats){
  const valid=smartSuggestions.filter(c=>tierFromCandidate(c).grade!=='reject').length;
  const invalid=smartSuggestions.length-valid;
  status.textContent=valid?valid+' Teil'+(valid===1?'':'e')+' erkannt'+(invalid?' · '+invalid+' unbrauchbar':'')+(second?'':' · Basis-KI'):'Keine brauchbaren Teile · Korrigieren';
+ }finally{release()}
 }
 let fashionComparison=null;
 function clearFashionComparison(){
