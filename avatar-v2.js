@@ -187,7 +187,8 @@ function texturePattern(item,cat){
  image.src=source;
 }
 function panel(parent,cat,part,d,base,rect,opacity=.86){
- const solid=path(parent,d,base);
+ const solid=base==='none'?null:path(parent,d,base);
+ if(opacity<=0)return solid;
  const zones=activeTexturePatterns.get(cat);
  const uri=zones&&zones[part];
  if(!uri)return solid;
