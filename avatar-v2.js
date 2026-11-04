@@ -304,6 +304,9 @@ function quickPicker(){
  const shuffle=document.createElement('button');shuffle.type='button';shuffle.className='secondary v3-shuffle';
  shuffle.textContent='⤨ Mixen';shuffle.setAttribute('aria-label','Neuen Look aus meiner Kleidung kombinieren');
  shuffle.onclick=()=>shuffleOutfit();
+ const canMix=['top','bottom','shoes'].some(cat=>availableGarments(cat).length>1)||availableGarments('outerwear').length>0;
+ shuffle.disabled=!canMix;
+ shuffle.title=canMix?'Neue Kombination aus deiner Garderobe':'Für neue Kombinationen mindestens zwei Teile einer Kategorie speichern';
  const save=document.createElement('button');save.type='button';save.className='secondary v3-save';
  save.textContent='♡ Sichern';save.setAttribute('aria-label','Aktuelles Outfit speichern');
  save.onclick=()=>saveOutfit();
