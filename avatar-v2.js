@@ -177,6 +177,27 @@ function shoesTemplate(item){
  accent(group,'M60 339 L82 339 M59 343 L84 343 M103 338 L123 338 M103 342 L127 342',tint(base,.6),.62,1.35);
  accent(group,'M35 351 L95 351 M100 351 L150 351',tint(base,1.65),.55,1.4);
 }
+function refreshGarmentSubtype(){
+ const categoryInput=document.getElementById('invEditCategory');
+ const dropdown=document.getElementById('invEditSubtype');
+ const wrapper=document.getElementById('invEditSubtypeWrap');
+ if(!categoryInput||!dropdown||!wrapper)return;
+ const cat=categoryInput.value;
+ const variants={
+  top:[['tee','T-Shirt / Regular'],['fitted','Slim / Fitted'],['oversized','Oversized'],['hoodie','Hoodie']],
+  bottom:[['slim','Slim Fit'],['straight','Straight'],['wide','Wide / Baggy']],
+  shoes:[['sneaker','Sneaker'],['chunky','Chunky'],['boot','Boot']],
+  outerwear:[['jacket','Jacke'],['hoodie','Hoodie']]
+ };
+ const group=variants[cat]||[];
+ dropdown.replaceChildren();
+ const auto=document.createElement('option');auto.value='';auto.textContent='Automatisch';dropdown.append(auto);
+ for(const [id,label] of group){const opt=document.createElement('option');opt.value=id;opt.textContent=label;dropdown.append(opt);}
+ wrapper.hidden=!group.length;
+ const item=items.find(it=>it.id===inventoryEditId);
+ dropdown.value=group.some(([id])=>id===item?.avatarSubtype)?item.avatarSubtype:'';
+}
+window.refreshGarmentSubtype=refreshGarmentSubtype;
 function quickPicker(){
  picker.replaceChildren();
  for(const [cat,label] of [['top','Oberteil'],['bottom','Hose'],['shoes','Schuhe'],['outerwear','Jacke']]){
