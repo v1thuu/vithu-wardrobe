@@ -203,6 +203,34 @@
 .v2-choice{display:grid;gap:5px;min-width:0;color:#b9c4c0;font-size:11px}
 .v2-choice select{width:100%;min-width:0;padding:9px 5px;border-radius:9px;font-size:12px}
 @media(max-width:480px){.v2-outfit-picker{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Avatar Studio V3: garment-led look building, premium but mobile-simple. */
+#avatarPanel .stage{background:radial-gradient(ellipse at 48% 27%,#4b4d53 0%,#35373d 27%,#24262e 63%,#181b22 100%);border-color:#3e474e;min-height:430px}
+#avatarPanel .stage:before{content:"";position:absolute;left:50%;bottom:22px;transform:translateX(-50%);width:200px;height:22px;border-radius:50%;background:#0b101b99;filter:blur(12px);pointer-events:none}
+#avatarPanel .figure .persona-drawing{filter:drop-shadow(3px 6px 6px #0005)}
+#avatarPanel .figure #avatarV2Garments{filter:drop-shadow(1px 3px 2px #0003)}
+.v3-studio-mode .avatar-outfit{display:none!important}
+#avatarPanel .v2-outfit-picker{display:block;margin:14px 0 16px;padding:0;background:transparent;border:0;border-radius:0}
+.v3-studio-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 11px}
+.v3-studio-kicker{font-size:11px;color:#b8f5ad;font-weight:850;letter-spacing:1.8px}
+.v3-studio-caption{margin:3px 0 0;font-size:11px;color:#adb5b3}
+.v3-studio-actions{display:flex;gap:6px}
+.v3-studio-actions button{font-size:11px;padding:9px 10px;border-radius:11px;white-space:nowrap}
+.v3-studio-actions .v3-save{border:1px solid #5f8064;background:#29362c}
+.v3-garment-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.v3-garment-card{min-width:0;min-height:78px;display:flex;align-items:center;justify-content:flex-start;gap:9px;position:relative;text-align:left;padding:8px;background:#22272d;border:1px solid #3e454d;border-radius:14px;color:#f4f4f2;box-shadow:none}
+.v3-garment-card:hover,.v3-garment-card:focus-visible{filter:none;background:#2b3238;border-color:#9bbd95}
+.v3-garment-thumb{flex:0 0 49px;width:49px;height:59px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:#ecece7;overflow:hidden}
+.v3-garment-thumb img{height:100%;width:100%;object-fit:contain}
+.v3-empty-icon{font-size:22px;color:#879197}
+.v3-garment-info{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:3px}
+.v3-garment-type{font-size:10px;color:#b1bfb6;font-weight:700}
+.v3-garment-name{font-size:12px;line-height:1.25;max-height:2.5em;overflow:hidden;overflow-wrap:anywhere;color:#fff}
+.v3-garment-next{flex:0 0 auto;align-self:flex-end;font-size:16px;color:#b7fac0;padding:1px}
+.v3-studio-empty{grid-column:1/-1;padding:18px 9px;margin:0;color:#b9c5c3;font-size:13px;text-align:center}
+#avatarPanel .persona-editor{margin-top:0;background:#20262a;border-color:#3f494a}
+@media(min-width:800px){.v3-garment-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:410px){.v3-garment-card{padding:7px;gap:7px}.v3-garment-thumb{flex-basis:43px;width:43px;height:54px}.v3-garment-name{font-size:11px}.v3-studio-actions button{padding:8px;font-size:11px}}
 </style></head><body>
 <header class="wardrobe-header"><h1>VITHU <span>WARDROBE</span></h1><details class="app-settings"><summary>⚙</summary><div class="btnrow"><button class="secondary" onclick="exportBackup()">↓ Backup</button><label class="filebutton secondary">↑ Backup laden<input type="file" accept="application/json,.json" onchange="importBackup(event)"></label></div><small>Deine Kleidung wird lokal auf diesem Gerät gespeichert.</small></details></header>
 <nav class="wardrobe-tabs" role="tablist" aria-label="Hauptnavigation"><button id="tab-wardrobe" role="tab" aria-selected="true" class="active" onclick="switchWardrobeTab('wardrobe')">👕 Garderobe</button><button id="tab-add" role="tab" aria-selected="false" class="secondary" onclick="switchWardrobeTab('add')">＋ Hinzufügen</button><button id="tab-avatar" role="tab" aria-selected="false" class="secondary" onclick="switchWardrobeTab('avatar')">◉ Avatar</button></nav>
