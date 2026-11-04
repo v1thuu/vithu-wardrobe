@@ -30,13 +30,7 @@ function element(tag,attrs={},parent=svg){
  parent.append(e);return e;
 }
 function path(parent,d,fill,stroke='#1a2027',strokeWidth=1.3){
- const base=element('path',{d,fill,stroke,'stroke-width':strokeWidth,'stroke-linejoin':'round','stroke-linecap':'round'},parent);
- const match=typeof fill==='string'&&fill.match(/^url\(#avatar-v2-grad-(top|bottom|shoes|outerwear)\)$/);
- if(match&&activeTexturePatterns.has(match[1])){
-  const pattern=activeTexturePatterns.get(match[1]);
-  element('path',{d,fill:'url(#'+pattern.id+')','fill-opacity':pattern.opacity,stroke:'none'},parent);
- }
- return base;
+ return element('path',{d,fill,stroke,'stroke-width':strokeWidth,'stroke-linejoin':'round','stroke-linecap':'round'},parent);
 }
 function accent(parent,d,stroke,opacity=.33,width=1.2){const el=path(parent,d,'none',stroke,width);el.setAttribute('stroke-opacity',opacity);return el;}
 function gradient(category,base){
@@ -121,126 +115,181 @@ function garmentColor(item,cat){
  return fallback;
 }
 
-/* Retain details of the owner's actual garment, but clip them inside a consistent
-   illustrated silhouette. No network, no original image changes and no external API. */
+/* Per-zone texture pipeline: analyse only the saved transparent garment image.
+   No user-photo uploads, no third-party API, no mutations of the original PNG.
+   Each body part uses an independent crop and an independent SVG clip silhouette. */
+const regionDefs={
+ top:{body:[.19,.15,.62,.82],leftSleeve:[.01,.17,.33,.39],rightSleeve:[.66,.17,.33,.39],logo:[.58,.21,.31,.26]},
+ outerwear:{body:[.17,.12,.66,.87],leftSleeve:[0,.20,.30,.62],rightSleeve:[.70,.20,.30,.62]},
+ bottom:{waist:[.04,.015,.92,.28],leftLeg:[.02,.25,.48,.74],rightLeg:[.50,.25,.48,.74]},
+ shoes:{leftShoe:[.01,.03,.48,.94],rightShoe:[.51,.03,.48,.94]}
+};
+function detectAlphaBounds(pixels,w,h){
+ if(!pixels||!w||!h)return null;
+ let minX=w,minY=h,maxX=-1,maxY=-1,n=0;
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+  if(pixels[(y*w+x)*4+3]<70)continue;
+  n++;if(x<minX)minX=x;if(x>maxX)maxX=x;
+  if(y<minY)minY=y;if(y>maxY)maxY=y;
+ }
+ if(n<10||n/(w*h)>.965||maxX<minX||maxY<minY)return null;
+ return {x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1};
+}
+function cropRegion(scan,bounds,region){
+ const [rx,ry,rw,rh]=region;
+ const left=Math.max(0,Math.floor(bounds.x+bounds.w*rx)),
+       top=Math.max(0,Math.floor(bounds.y+bounds.h*ry));
+ const width=Math.min(scan.width-left,Math.max(1,Math.round(bounds.w*rw))),
+       height=Math.min(scan.height-top,Math.max(1,Math.round(bounds.h*rh)));
+ if(width<=0||height<=0)return null;
+ const out=document.createElement('canvas');
+ out.width=112;out.height=152;
+ const ctx=out.getContext('2d');if(!ctx)return null;
+ ctx.filter='saturate(.93) contrast(1.10)';
+ ctx.drawImage(scan,left,top,width,height,0,0,out.width,out.height);
+ return out.toDataURL('image/png');
+}
 function texturePattern(item,cat){
- const cached=textureCache.get(item.id);
- if(cached&&cached.source===item.image){
-  if(!cached.texture)return;
-  const id='avatar-v3-texture-'+cat;
-  const defs=svg.querySelector('defs')||element('defs');
-  const pattern=element('pattern',{id,patternUnits:'userSpaceOnUse',width:180,height:365,x:0,y:0},defs);
-  const box={top:[26,80,128,135],outerwear:[20,78,140,144],bottom:[48,208,85,129],shoes:[32,324,126,35]}[cat];
-  element('image',{x:box[0],y:box[1],width:box[2],height:box[3],preserveAspectRatio:'none',href:cached.texture},pattern);
-  activeTexturePatterns.set(cat,{id,opacity:cat==='shoes'?.58:cat==='bottom'?.84:.83});
+ const source=item.image||'';
+ const key=cat+':'+item.id;
+ const existing=textureCache.get(key);
+ if(existing&&existing.source===source){
+  if(existing.zones)activeTexturePatterns.set(cat,existing.zones);
   return;
  }
- if(!/^data:image\/(?:png|jpeg|jpg|webp);base64,/.test(item.image||''))return;
- const record={source:item.image,texture:null};
- textureCache.set(item.id,record);
- // Cap the cache: clear old sessions; one item is processed once per app session.
- if(textureCache.size>32)textureCache.delete(textureCache.keys().next().value);
+ if(!/^data:image\/(?:png|jpeg|jpg|webp);base64,/.test(source))return;
+ const record={source,zones:null,pending:true};
+ textureCache.set(key,record);
+ if(textureCache.size>24)textureCache.delete(textureCache.keys().next().value);
  const image=new Image();
  image.onload=()=>{
   try{
    if(!image.naturalWidth||!image.naturalHeight)return;
-   const scan=document.createElement('canvas'),limit=360,ratio=Math.min(1,limit/Math.max(image.naturalWidth,image.naturalHeight));
-   scan.width=Math.max(1,Math.round(image.naturalWidth*ratio));
-   scan.height=Math.max(1,Math.round(image.naturalHeight*ratio));
+   const scan=document.createElement('canvas');
+   const factor=Math.min(1,380/Math.max(image.naturalWidth,image.naturalHeight));
+   scan.width=Math.max(1,Math.round(image.naturalWidth*factor));
+   scan.height=Math.max(1,Math.round(image.naturalHeight*factor));
    const ctx=scan.getContext('2d',{willReadFrequently:true});if(!ctx)return;
    ctx.drawImage(image,0,0,scan.width,scan.height);
-   const rgba=ctx.getImageData(0,0,scan.width,scan.height).data;
-   let minX=scan.width,minY=scan.height,maxX=-1,maxY=-1,total=0;
-   const count=scan.width*scan.height;
-   for(let y=0;y<scan.height;y++)for(let x=0;x<scan.width;x++){
-    if(rgba[(y*scan.width+x)*4+3]<55)continue;
-    total++;minX=Math.min(minX,x);maxX=Math.max(maxX,x);
-    minY=Math.min(minY,y);maxY=Math.max(maxY,y);
+   const bounds=detectAlphaBounds(ctx.getImageData(0,0,scan.width,scan.height).data,scan.width,scan.height);
+   if(!bounds)return;
+   const zones={};
+   for(const [name,region] of Object.entries(regionDefs[cat]||{})){
+    const texture=cropRegion(scan,bounds,region);
+    if(texture)zones[name]=texture;
    }
-   // Opaque screenshot backgrounds are unsuitable as garment textures.
-   if(total<count*.965||total<1){
-    if(maxX<minX||maxY<minY)return;
-    const output=document.createElement('canvas');
-    output.width=144;output.height=192;
-    const out=output.getContext('2d');if(!out)return;
-    out.filter='saturate(.88) contrast(.96)';
-    out.drawImage(scan,minX,minY,maxX-minX+1,maxY-minY+1,0,0,output.width,output.height);
-    const current=textureCache.get(item.id);
-    if(!current||current.source!==item.image)return;
-    current.texture=output.toDataURL('image/png');
-    drawAvatarV2();
-   }
-  }catch(e){console.warn('V3 local textile detail extraction skipped',e);}
+   const current=textureCache.get(key);
+   if(!current||current.source!==source)return;
+   current.zones=zones;current.pending=false;
+   drawAvatarV2();
+  }catch(e){console.warn('Local split texture unavailable, using colour fallback',e);}
  };
- image.onerror=()=>{};
- image.src=item.image;
+ image.onerror=()=>{const current=textureCache.get(key);if(current&&current.source===source)current.pending=false;};
+ image.src=source;
 }
-
+function panel(parent,cat,part,d,base,rect,opacity=.86){
+ const solid=base==='none'?null:path(parent,d,base);
+ if(opacity<=0)return solid;
+ const zones=activeTexturePatterns.get(cat);
+ const uri=zones&&zones[part];
+ if(!uri)return solid;
+ const id='avatar-vnext-'+cat+'-'+part;
+ const defs=svg.querySelector('defs')||element('defs');
+ const pattern=element('pattern',{id,x:0,y:0,width:180,height:365,patternUnits:'userSpaceOnUse'},defs);
+ element('image',{x:rect[0],y:rect[1],width:rect[2],height:rect[3],href:uri,preserveAspectRatio:'none'},pattern);
+ element('path',{d,fill:'url(#'+id+')','fill-opacity':opacity,stroke:'none'},parent);
+ return solid;
+}
+function fitSettings(item){
+ const fit=item.avatarFitV2&&typeof item.avatarFitV2==='object'?item.avatarFitV2:{};
+ const length=['short','regular','long'].includes(fit.length)?fit.length:'regular';
+ const details=['auto','smooth','detailed'].includes(fit.details)?fit.details:'auto';
+ return {length,details};
+}
+function fabricOpacity(item,cat){
+ const details=fitSettings(item).details;
+ return details==='smooth'?0:details==='detailed'?1:cat==='shoes'?.9:.84;
+}
 function topTemplate(item,cat){
- const sub=determineSubtype(item,cat),base=garmentColor(item,cat),fabric=gradient(cat,base);
+ const sub=determineSubtype(item,cat),base=garmentColor(item,cat),fabric=gradient(cat,base),opacity=fabricOpacity(item,cat);
  texturePattern(item,cat);
  const group=element('g',{'data-avatar-slot':cat});
- const build=avatarProfile&&avatarProfile.build||'athletic';
- const bodyFactor={lean:.91,athletic:1,broad:1.09}[build]||1;
- group.setAttribute('transform','translate(90 0) scale('+bodyFactor+' 1) translate(-90 0)');
- if(cat==='outerwear'){
-  if(sub==='hoodie'){
-   path(group,'M72 78 Q90 62 108 78 L118 97 L104 112 L76 112 L62 97Z',tint(base,.8));
-   path(group,'M65 80 L42 87 L26 108 L20 188 L36 194 L46 128 L49 213 Q90 221 131 213 L134 128 L144 194 L160 188 L154 108 L138 87 L115 80 L104 99 L90 105 L76 99Z',fabric);
-   accent(group,'M83 110 L83 203 M97 110 L97 203',tint(base,1.5),.45);
-  }else{
-   path(group,'M70 80 L42 86 L25 105 L18 184 L35 191 L47 127 L48 211 L81 211 L89 123 L99 123 L100 211 L132 211 L133 127 L145 191 L162 184 L155 105 L137 86 L110 80 L98 102 L89 115 L81 102Z',fabric);
-   accent(group,'M89 115 L89 211 M99 123 L100 210',tint(base,1.5),.58,1.8);
+ const build=avatarProfile&&avatarProfile.build||'athletic',scale={lean:.91,athletic:1,broad:1.09}[build]||1;
+ group.setAttribute('transform','translate(90 0) scale('+scale+' 1) translate(-90 0)');
+ if(cat==='outerwear'||sub==='hoodie'){
+  const hoodie=sub==='hoodie';
+  if(hoodie){
+   path(group,'M73 79 Q90 60 108 79 L121 96 L104 111 L76 111 L59 96Z',tint(base,.79));
+   accent(group,'M77 92 Q90 109 104 92',tint(base,1.54),.34,2);
   }
-  accent(group,'M33 180 L19 177 M147 180 L161 177 M51 206 L78 206 M105 206 L127 206',tint(base,1.55),.45);
+  panel(group,cat,'leftSleeve','M66 81 L44 88 Q30 95 27 109 L19 186 L36 193 L48 131 L60 104Z',tint(base,.90),[18,84,44,115],opacity);
+  panel(group,cat,'rightSleeve','M114 81 L136 88 Q151 95 154 109 L161 186 L144 193 L132 131 L120 104Z',tint(base,.90),[119,84,44,115],opacity);
+  if(hoodie){
+   panel(group,cat,'body','M66 82 L76 98 Q90 106 104 98 L114 82 L132 98 L133 211 Q90 220 47 211 L48 98Z',fabric,[46,83,89,137],opacity);
+   accent(group,'M73 184 Q90 180 107 184 L109 204 L71 204Z',tint(base,1.45),.38);
+  }else{
+   panel(group,cat,'body','M66 82 L77 97 L87 117 L82 213 L47 213 L48 99Z',fabric,[46,82,43,134],opacity);
+   panel(group,cat,'body','M114 82 L103 97 L93 117 L98 213 L133 213 L132 99Z',fabric,[91,82,43,134],opacity);
+   accent(group,'M89 116 L89 210 M100 115 L99 210',tint(base,1.5),.6,1.8);
+  }
+  accent(group,'M27 182 L36 183 M144 183 L153 182 M49 207 L78 207 M102 207 L132 207',tint(base,1.5),.43);
   return;
  }
- if(sub==='hoodie'){
-  path(group,'M72 77 Q90 61 109 77 L120 98 L105 112 L76 112 L61 97Z',tint(base,.82));
-  path(group,'M65 82 L41 87 L25 107 L20 187 L36 192 L46 132 L46 212 Q90 219 134 212 L134 132 L144 192 L160 187 L155 107 L139 87 L115 82 L104 96 L76 96Z',fabric);
-  accent(group,'M67 105 Q90 122 113 105 M69 185 Q90 179 111 185 L112 202 L69 202Z',tint(base,1.5),.4);
- }else if(sub==='oversized'){
-  path(group,'M65 83 L37 87 L19 106 L34 137 L45 133 L43 211 Q90 219 137 211 L135 133 L146 137 L161 106 L143 87 L115 83 Q104 95 90 97 Q76 95 65 83Z',fabric);
-  accent(group,'M35 133 L44 130 M136 130 L145 133 M45 208 Q89 215 135 208',tint(base,1.55),.43);
- }else if(sub==='fitted'){
-  path(group,'M66 82 L47 87 L31 105 L42 128 L52 124 Q47 166 50 205 Q90 211 130 205 Q133 166 128 124 L138 128 L149 105 L133 87 L114 82 Q104 95 90 96 Q76 95 66 82Z',fabric);
-  accent(group,'M43 124 L51 121 M129 121 L137 124 M52 204 Q90 210 128 204',tint(base,1.55),.40);
- }else{
-  path(group,'M65 82 L44 87 L26 106 L38 132 L49 127 L48 208 Q90 214 132 208 L131 127 L142 132 L154 106 L136 87 L115 82 Q104 95 90 96 Q76 95 65 82Z',fabric);
-  accent(group,'M39 127 L48 123 M132 123 L141 127 M50 206 Q90 213 130 206',tint(base,1.55),.4);
- }
- // Neckline follows body geometry, including a subtle contrast inner rim.
- accent(group,'M75 84 Q90 104 105 84',tint(base,.55),.72,2.4);
- accent(group,'M75 86 Q90 104 105 86',tint(base,1.5),.25,1.1);
+ const oversized=sub==='oversized',fitted=sub==='fitted';
+ const length=fitSettings(item).length, bottomY=length==='short'?194:length==='long'?219:209;
+ const left=oversized?'M66 82 L37 87 L19 106 L34 139 L50 132 L60 101Z':
+   fitted?'M66 82 L47 87 L31 105 L42 129 L52 123 L58 98Z':
+   'M66 82 L44 87 L26 106 L38 133 L49 126 L58 98Z';
+ const right=oversized?'M114 82 L143 87 L161 106 L146 139 L130 132 L120 101Z':
+   fitted?'M114 82 L133 87 L149 105 L138 129 L128 123 L122 98Z':
+   'M114 82 L136 87 L154 106 L142 133 L131 126 L122 98Z';
+ const body=oversized?'M66 82 Q77 96 90 98 Q103 96 114 82 L136 95 L137 '+bottomY+' Q90 '+(bottomY+8)+' 43 '+bottomY+' L44 95Z':
+   fitted?'M66 82 Q76 95 90 97 Q104 95 114 82 L128 95 Q124 143 131 '+bottomY+' Q90 '+(bottomY+6)+' 49 '+bottomY+' Q56 148 52 95Z':
+   'M66 82 Q77 95 90 97 Q103 95 114 82 L131 95 L132 '+bottomY+' Q90 '+(bottomY+7)+' 48 '+bottomY+' L49 95Z';
+ panel(group,cat,'leftSleeve',left,tint(base,.91),[18,82,48,60],opacity);
+ panel(group,cat,'rightSleeve',right,tint(base,.92),[114,82,49,60],opacity);
+ panel(group,cat,'body',body,fabric,[43,82,94,bottomY-79],opacity);
+ // Real right-chest print region. Never synthesize a logo.
+ panel(group,cat,'logo','M99 103 Q107 102 118 104 L118 123 Q109 124 99 122Z','none',[99,103,20,21],opacity);
+ accent(group,'M75 85 Q90 104 105 85',tint(base,.6),.64,2.5);
+ accent(group,'M50 '+(bottomY-3)+' Q90 '+(bottomY+4)+' 130 '+(bottomY-3),tint(base,1.6),.44,1.6);
+ accent(group,'M39 128 L48 124 M132 124 L141 128',tint(base,1.55),.36);
 }
 function pantsTemplate(item){
- const cat='bottom',sub=determineSubtype(item,cat),base=garmentColor(item,cat),fabric=gradient(cat,base);
+ const cat='bottom',sub=determineSubtype(item,cat),base=garmentColor(item,cat),fabric=gradient(cat,base),opacity=fabricOpacity(item,cat);
  texturePattern(item,cat);
  const group=element('g',{'data-avatar-slot':cat});
- const build=avatarProfile&&avatarProfile.build||'athletic',shapeScale={lean:.93,athletic:1,broad:1.065}[build]||1;
- group.setAttribute('transform','translate(90 0) scale('+shapeScale+' 1) translate(-90 0)');
+ const build=avatarProfile&&avatarProfile.build||'athletic',scale={lean:.93,athletic:1,broad:1.065}[build]||1;
+ group.setAttribute('transform','translate(90 0) scale('+scale+' 1) translate(-90 0)');
  const slim=sub==='slim',wide=sub==='wide';
- const cuffLeft=wide?49:slim?60:54,cuffRight=wide?90:slim?86:89;
- const rightLeft=wide?90:slim?96:92,rightRight=wide?132:slim?121:128;
- path(group,'M51 206 Q90 211 129 206 L131 241 Q127 277 '+rightRight+' 334 L'+rightLeft+' 336 Q94 299 90 261 Q86 300 '+cuffRight+' 336 L'+cuffLeft+' 335 Q53 282 49 244Z',fabric);
- accent(group,'M51 212 Q90 217 129 212 M90 213 L89 253 M60 227 Q71 232 81 226 M100 226 Q111 232 122 227',tint(base,.64),.58,1.6);
- accent(group,'M'+cuffLeft+' 332 L'+cuffRight+' 333 M'+rightLeft+' 333 L'+rightRight+' 332',tint(base,1.6),.42,2);
- accent(group,'M60 242 Q65 285 '+(cuffLeft+4)+' 315 M117 240 Q113 285 '+(rightRight-4)+' 316',tint(base,.6),.22);
+ const leftStart=wide?46:slim?55:51,leftEnd=wide?92:slim?86:89;
+ const rightStart=wide?90:slim?96:92,rightEnd=wide?135:slim?123:129;
+ const length=fitSettings(item).length,cuffY=length==='short'?325:length==='long'?341:335;
+ const leftD='M50 221 L89 220 Q93 242 89 268 L'+leftEnd+' '+cuffY+' Q'+(leftStart+leftEnd)/2+' '+(cuffY+4)+' '+leftStart+' '+cuffY+' L'+(leftStart-4)+' 278 Q48 243 50 221Z';
+ const rightD='M92 220 L129 221 Q132 247 '+(rightEnd+1)+' 285 L'+rightEnd+' '+cuffY+' Q'+(rightStart+rightEnd)/2+' '+(cuffY+4)+' '+rightStart+' '+cuffY+' L93 264 Q89 240 92 220Z';
+ panel(group,cat,'leftLeg',leftD,fabric,[leftStart-6,222,leftEnd-leftStart+14,cuffY-219],opacity);
+ panel(group,cat,'rightLeg',rightD,fabric,[rightStart-7,222,rightEnd-rightStart+15,cuffY-219],opacity);
+ panel(group,cat,'waist','M51 206 Q90 212 129 206 L130 233 Q111 230 92 232 L90 247 L87 232 Q68 232 50 233Z',fabric,[49,206,83,43],opacity);
+ accent(group,'M52 213 Q90 219 128 213 M89 216 L89 245 M58 226 Q69 231 81 225 M99 225 Q110 231 121 226',tint(base,.63),.58,1.55);
+ accent(group,'M'+leftStart+' '+(cuffY-2)+' L'+leftEnd+' '+(cuffY-2)+' M'+rightStart+' '+(cuffY-2)+' L'+rightEnd+' '+(cuffY-2),tint(base,1.55),.5,1.9);
+ accent(group,'M62 249 Q69 281 '+(leftStart+6)+' '+(cuffY-11)+' M115 248 Q110 286 '+(rightEnd-6)+' '+(cuffY-11),tint(base,.58),.26,1.1);
 }
 function shoesTemplate(item){
- const cat='shoes',base=garmentColor(item,cat),fabric=gradient(cat,base),sub=determineSubtype(item,cat);
+ const cat='shoes',base=garmentColor(item,cat),fabric=gradient(cat,base),sub=determineSubtype(item,cat),opacity=fabricOpacity(item,cat);
  texturePattern(item,cat);
  const group=element('g',{'data-avatar-slot':cat});
- if(sub==='boot'){
-  path(group,'M57 315 L85 315 L89 348 Q89 358 81 358 L36 358 Q31 352 41 344 L55 335Z',fabric);
-  path(group,'M98 315 L124 315 L129 338 Q151 345 153 354 Q153 359 143 359 L99 359 Q94 354 98 315Z',fabric);
- }else{
-  path(group,'M60 327 Q72 330 85 327 L90 343 Q104 348 99 354 Q97 358 88 358 L34 358 Q26 354 36 347 L56 337Z',fabric);
-  path(group,'M100 327 Q113 332 125 328 L131 340 Q154 347 155 353 Q155 358 148 358 L100 358 Q93 354 100 327Z',fabric);
- }
- path(group,'M33 355 L98 355 M99 355 L154 355','none',tint(base,.55),2);
- accent(group,'M60 339 L82 339 M59 343 L84 343 M103 338 L123 338 M103 342 L127 342',tint(base,.6),.62,1.35);
- accent(group,'M35 351 L95 351 M100 351 L150 351',tint(base,1.65),.55,1.4);
+ const boot=sub==='boot',chunky=sub==='chunky';
+ const left=boot?'M57 316 L84 316 L90 344 Q96 357 82 359 L36 359 Q29 353 40 345 L55 336Z':
+ chunky?'M60 327 Q73 330 85 326 L92 342 Q107 347 101 355 Q98 361 86 360 L34 360 Q25 355 35 347 L56 337Z':
+ 'M60 327 Q72 330 85 327 L90 343 Q104 348 99 354 Q97 358 88 358 L34 358 Q26 354 36 347 L56 337Z';
+ const right=boot?'M99 316 L124 316 L129 338 Q151 345 153 354 Q153 360 143 359 L99 359 Q93 354 99 316Z':
+ chunky?'M100 326 Q112 329 125 326 L133 338 Q158 347 157 355 Q155 361 145 360 L100 360 Q91 357 100 326Z':
+ 'M100 327 Q113 332 125 328 L131 340 Q154 347 155 353 Q155 358 148 358 L100 358 Q93 354 100 327Z';
+ panel(group,cat,'leftShoe',left,fabric,[33,325,69,35],opacity);
+ panel(group,cat,'rightShoe',right,fabric,[98,324,60,36],opacity);
+ accent(group,'M34 355 L99 355 M100 355 L154 355',tint(base,.55),.7,2.1);
+ accent(group,'M60 338 L82 338 M59 342 L84 342 M105 338 L124 338 M105 342 L128 342',tint(base,.6),.55,1.35);
+ accent(group,'M37 351 L96 351 M101 351 L150 351',tint(base,1.55),.50,1.2);
 }
 function refreshGarmentSubtype(){
  const categoryInput=document.getElementById('invEditCategory');
@@ -259,6 +308,7 @@ function refreshGarmentSubtype(){
  const auto=document.createElement('option');auto.value='';auto.textContent='Automatisch';dropdown.append(auto);
  for(const [id,label] of group){const opt=document.createElement('option');opt.value=id;opt.textContent=label;dropdown.append(opt);}
  wrapper.hidden=!group.length;
+ const tuning=document.getElementById('invAvatarTuning');if(tuning)tuning.hidden=!group.length;
  const item=items.find(it=>it.id===inventoryEditId);
  dropdown.value=group.some(([id])=>id===item?.avatarSubtype)?item.avatarSubtype:'';
 }
