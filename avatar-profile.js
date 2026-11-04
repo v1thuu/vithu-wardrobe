@@ -1,0 +1,44 @@
+/* VITHU WARDROBE: free, original SVG avatar. No remote API, no photos sent. */
+(function(){
+'use strict';
+const figure=document.getElementById('figure'),editor=document.getElementById('personaEditor');
+if(!figure||!editor)return;
+const defaults={build:'athletic',skin:'warm',hair:'short',beard:'full',glasses:'on'};
+const choices={build:['lean','athletic','broad'],skin:['light','warm','medium','deep'],hair:['short','curly','buzz'],beard:['none','stubble','full'],glasses:['off','on']};
+const skins={light:{base:'#E3B28F',shade:'#B77756',light:'#F6CFAD'},warm:{base:'#BC8764',shade:'#805339',light:'#DDA582'},medium:{base:'#976343',shade:'#633D2B',light:'#B77C57'},deep:{base:'#74472F',shade:'#442817',light:'#935E3D'}};
+const svgMarkup="<svg id=\"personaDrawing\" class=\"persona-drawing\" viewBox=\"0 0 180 365\" width=\"180\" height=\"365\" role=\"img\" aria-label=\"Personalisierter Avatar\" xmlns=\"http://www.w3.org/2000/svg\">\n<defs><linearGradient id=\"personaSkin\" x1=\"0\" x2=\"1\" y1=\".2\" y2=\".7\"><stop offset=\"0%\" stop-color=\"var(--persona-light)\"/><stop offset=\"42%\" stop-color=\"var(--persona-skin)\"/><stop offset=\"100%\" stop-color=\"var(--persona-shade)\"/></linearGradient><linearGradient id=\"personaShirt\" x1=\"0\" x2=\"1\"><stop stop-color=\"#68717e\"/><stop offset=\".46\" stop-color=\"#414a55\"/><stop offset=\"1\" stop-color=\"#282d37\"/></linearGradient><linearGradient id=\"personaPants\" x1=\"0\" x2=\"1\"><stop stop-color=\"#252a33\"/><stop offset=\".43\" stop-color=\"#454b56\"/><stop offset=\"1\" stop-color=\"#252932\"/></linearGradient></defs>\n<g id=\"personaLowerBody\" stroke=\"#191d22\" stroke-width=\"1.3\" stroke-linejoin=\"round\">\n<path d=\"M49 208 Q70 203 91 208 L98 217 Q96 248 91 272 L85 338 Q71 342 59 336 L55 276Z\" fill=\"url(#personaPants)\"/><path d=\"M92 208 Q112 202 133 209 L127 280 L122 338 Q109 341 97 337 L90 273 Q85 235 92 208Z\" fill=\"url(#personaPants)\"/>\n<path d=\"M75 232 Q79 274 75 328 M106 236 L110 327\" fill=\"none\" stroke=\"#cbd2d9\" stroke-opacity=\".16\" stroke-width=\"1.3\"/>\n<path d=\"M59 333 Q72 337 85 333 L89 350 Q96 359 83 359 L40 359 Q31 357 37 350 L56 341Z\" fill=\"#353b43\"/><path d=\"M98 333 Q111 338 123 333 L128 345 Q153 351 153 356 Q152 359 142 359 L102 359 Q94 357 98 333Z\" fill=\"#343a42\"/>\n<path d=\"M39 356 L86 356 M103 356 L151 356\" fill=\"none\" stroke=\"#b9c5cd\" stroke-opacity=\".35\" stroke-width=\"2\"/>\n</g>\n<g id=\"personaUpperBody\">\n<path d=\"M44 84 Q27 82 21 100 L10 157 Q4 180 9 193 L8 214 Q10 228 18 228 Q24 227 27 215 L38 189 L52 122Z\" fill=\"url(#personaSkin)\" stroke=\"var(--persona-shade)\" stroke-opacity=\".45\"/>\n<path d=\"M136 84 Q153 82 159 100 L170 157 Q176 180 171 193 L172 214 Q170 228 162 228 Q156 227 153 215 L142 189 L128 122Z\" fill=\"url(#personaSkin)\" stroke=\"var(--persona-shade)\" stroke-opacity=\".45\"/>\n<path d=\"M14 172 L17 207 M166 172 L163 207\" fill=\"none\" stroke=\"var(--persona-shade)\" stroke-opacity=\".31\" stroke-width=\"2\"/>\n<path d=\"M69 76 Q57 77 45 82 L32 89 Q22 97 28 116 L38 134 L43 205 Q66 213 90 213 Q115 213 137 205 L142 134 L152 116 Q158 97 148 89 L135 82 Q123 77 110 76Z\" fill=\"url(#personaShirt)\" stroke=\"#202630\" stroke-width=\"1.4\"/>\n<path d=\"M34 93 Q29 103 40 132 L56 129 L54 92Z M146 93 Q152 103 140 132 L124 129 L127 92Z\" fill=\"#303842\" stroke=\"#242933\" stroke-width=\"1.3\"/>\n<path d=\"M56 102 Q60 133 53 178 M123 103 Q121 136 126 178 M55 206 Q90 213 125 206\" fill=\"none\" stroke=\"#e9edf0\" stroke-opacity=\".12\" stroke-width=\"1.6\"/>\n</g>\n<g id=\"personaHead\">\n<path d=\"M76 65 L77 85 Q90 98 103 85 L104 65Z\" fill=\"url(#personaSkin)\" stroke=\"var(--persona-shade)\" stroke-opacity=\".4\"/>\n<path d=\"M61 43 Q60 16 88 15 Q115 12 120 40 L118 60 Q116 78 101 86 Q90 92 79 86 Q62 77 61 57Z\" fill=\"url(#personaSkin)\" stroke=\"var(--persona-shade)\" stroke-opacity=\".55\" stroke-width=\"1.2\"/>\n<path d=\"M62 51 Q51 44 55 59 Q58 68 64 65 M118 51 Q129 44 125 59 Q123 68 117 65\" fill=\"url(#personaSkin)\" stroke=\"var(--persona-shade)\" stroke-opacity=\".5\"/>\n<path d=\"M70 46 Q76 42 84 46 M96 46 Q103 42 110 46\" stroke=\"#242024\" stroke-width=\"2.8\" stroke-linecap=\"round\" fill=\"none\"/>\n<ellipse cx=\"77.5\" cy=\"51\" rx=\"3\" ry=\"2.8\" fill=\"#28232a\"/><ellipse cx=\"102.5\" cy=\"51\" rx=\"3\" ry=\"2.8\" fill=\"#28232a\"/>\n<path d=\"M90 49 L87 61 Q89 64 94 62\" stroke=\"var(--persona-shade)\" stroke-opacity=\".65\" stroke-width=\"1.8\" stroke-linecap=\"round\" fill=\"none\"/>\n<path d=\"M81 70 Q90 73 99 70\" stroke=\"#603f35\" stroke-width=\"2\" stroke-linecap=\"round\" fill=\"none\"/>\n</g>\n<g id=\"personaHairShort\" fill=\"#1a1a1d\" stroke=\"#101014\" stroke-width=\".8\"><path d=\"M61 46 Q56 26 66 18 Q75 11 89 14 Q110 10 119 27 L119 45 L115 36 Q112 27 98 27 Q76 27 65 32Z\"/><path d=\"M61 41 L61 52 M119 40 L119 52\" stroke-width=\"4\"/><path d=\"M69 24 Q80 19 103 21\" fill=\"none\" stroke=\"#656268\" opacity=\".26\" stroke-width=\"2\"/></g>\n<g id=\"personaHairCurly\" fill=\"#18181b\" stroke=\"#0f1013\" stroke-width=\".5\" style=\"display:none\"><path d=\"M59 46 Q54 28 65 19 Q75 11 88 14 Q114 11 121 30 L119 47 L115 38 Q100 24 69 32 L65 42Z\"/><circle cx=\"65\" cy=\"25\" r=\"8\"/><circle cx=\"76\" cy=\"19\" r=\"8\"/><circle cx=\"88\" cy=\"18\" r=\"9\"/><circle cx=\"101\" cy=\"20\" r=\"9\"/><circle cx=\"111\" cy=\"25\" r=\"8\"/></g>\n<g id=\"personaHairBuzz\" fill=\"#29262b\" style=\"display:none\"><path d=\"M61 43 Q58 22 76 17 Q96 10 110 21 Q120 29 119 43 L116 36 Q109 22 89 25 Q68 25 64 39Z\"/></g>\n<g id=\"personaBeardFull\" fill=\"#282327\" stroke=\"#17171a\" stroke-opacity=\".35\" stroke-width=\".8\"><path d=\"M62 56 Q66 62 70 65 L76 69 Q79 79 90 81 Q101 79 105 69 L112 64 Q116 60 119 55 Q118 74 106 84 Q98 93 89 93 Q77 91 69 83 Q59 69 62 56Z\"/><path d=\"M74 59 Q79 65 85 63 L95 63 Q101 65 108 59 L105 68 Q98 66 90 67 Q81 66 76 69Z\"/><path d=\"M82 71 Q90 73 98 71\" fill=\"none\" stroke=\"#a27a66\" stroke-width=\"1.7\" stroke-opacity=\".7\"/></g>\n<g id=\"personaBeardStubble\" fill=\"#30282a\" opacity=\".55\" style=\"display:none\"><path d=\"M63 59 Q67 70 76 77 Q90 88 104 77 Q113 71 117 59 Q114 77 104 83 Q89 91 77 83 Q65 73 63 59Z\"/><path d=\"M78 63 Q90 61 102 63 L100 67 Q90 64 80 67Z\"/></g>\n<g id=\"personaGlasses\" stroke=\"#1b1b24\" stroke-width=\"3\" fill=\"#1b272d\" stroke-linejoin=\"round\"><path d=\"M65 47 L85 47 L84 58 Q75 62 68 56Z\"/><path d=\"M95 47 L115 47 L112 56 Q105 62 96 58Z\"/><path d=\"M85 50 Q90 47 95 50 M65 49 L60 47 M115 49 L121 47\" fill=\"none\"/><path d=\"M70 49 L77 49 M99 49 L106 49\" stroke=\"#b5c5d2\" stroke-width=\"1.2\" opacity=\".65\"/></g>\n</svg>";
+const host=document.createElement('div');host.innerHTML=svgMarkup;
+const art=host.firstElementChild;
+if(!art||art.namespaceURI!=='http://www.w3.org/2000/svg')return;
+figure.prepend(art);figure.classList.add('profile-ready');
+const node=id=>art.querySelector('#'+id);
+function normalizedProfile(){
+ const saved=avatarProfile&&typeof avatarProfile==='object'?avatarProfile:{};
+ const result={};
+ for(const [k,opts] of Object.entries(choices))result[k]=opts.includes(saved[k])?saved[k]:defaults[k];
+ return result;
+}
+function renderCustomAvatar(){
+ const profile=normalizedProfile(),skin=skins[profile.skin];
+ art.style.setProperty('--persona-skin',skin.base);
+ art.style.setProperty('--persona-light',skin.light);
+ art.style.setProperty('--persona-shade',skin.shade);
+ const s={lean:.88,athletic:1,broad:1.12}[profile.build],legs={lean:.94,athletic:1,broad:1.085}[profile.build];
+ node('personaUpperBody').setAttribute('transform','translate(90 0) scale('+s+' 1) translate(-90 0)');
+ node('personaLowerBody').setAttribute('transform','translate(90 0) scale('+legs+' 1) translate(-90 0)');
+ for(const haircut of ['Short','Curly','Buzz'])node('personaHair'+haircut).style.display=profile.hair===haircut.toLowerCase()?'':'none';
+ node('personaBeardFull').style.display=profile.beard==='full'?'':'none';
+ node('personaBeardStubble').style.display=profile.beard==='stubble'?'':'none';
+ node('personaGlasses').style.display=profile.glasses==='on'?'':'none';
+ for(const [k,value] of Object.entries(profile)){const input=document.getElementById('persona-'+k);if(input&&input.value!==value)input.value=value;}
+}
+function updateAvatarProfile(key,value){
+ if(!Object.prototype.hasOwnProperty.call(choices,key)||!choices[key].includes(value))return;
+ avatarProfile={...normalizedProfile(),[key]:value};
+ renderCustomAvatar();
+ if(typeof storageReady!=='undefined'&&storageReady)persist().catch(e=>console.error('Avatar profile save failed',e));
+}
+window.renderCustomAvatar=renderCustomAvatar;
+window.updateAvatarProfile=updateAvatarProfile;
+renderCustomAvatar();
+})();
