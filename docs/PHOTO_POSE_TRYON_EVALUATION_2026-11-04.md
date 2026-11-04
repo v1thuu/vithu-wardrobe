@@ -31,3 +31,8 @@ Diese Änderung ersetzt **nicht** den bestehenden 2D-Avatar. Sie erweitert nur d
 
 ## Produktentscheidung für nächsten Schritt
 Photo-Pose Alignment ist ein risikoarmes Zwischenexperiment, kein finales Avatar-Design. Wenn optisch weiterhin unbefriedigend: nicht weitere Skalierungsbuttons bauen, sondern echte Virtual-Try-On-Modelle (Bildgenerierung, Occlusion, warping, datenschutzkonforme Verarbeitung und Lizenz) separat evaluieren und erst nach Qualitätsvergleich entscheiden.
+
+## Zusatzprüfungen nach Veröffentlichung
+- Backup-Import isoliert mit dem tatsächlichen `importBackup()` getestet: alter Backup-Datensatz ohne Foto-Felder, neuer Datensatz mit Pose/Fits, ungültiges Backup, kein Überschreiben gültiger Daten bei fehlerhaftem Import – alle Assertions bestanden.
+- GitHub Pages `pages build and deployment` für Preview-Commit `86b0456a60024736ded3e79c4a66958385310b3b` meldet **success**; manuelle Safari-Funktionsprüfung steht weiterhin aus.
+- Draft-PR zur Ausgangsbasis: https://github.com/v1thuu/vithu-wardrobe/pull/15. Keine Übernahme in das Produktiv-`main/index.html`.
