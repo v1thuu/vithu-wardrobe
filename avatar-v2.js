@@ -15,7 +15,7 @@ svg.setAttribute('height','365');
 svg.setAttribute('aria-label','Stilisierte Kleidung auf dem Avatar');
 figure.append(svg);
 const FALLBACK={top:'#282a2d',bottom:'#777c83',shoes:'#e5e3dc',outerwear:'#586675'};
-const cache=new Map();
+const cache=new Map(), textureCache=new Map(), activeTexturePatterns=new Map();
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 const safeHex=(value,alternative)=>/^#[0-9a-f]{6}$/i.test(value||'')?value:alternative;
 const hexRgb=(hex)=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));
@@ -30,7 +30,13 @@ function element(tag,attrs={},parent=svg){
  parent.append(e);return e;
 }
 function path(parent,d,fill,stroke='#1a2027',strokeWidth=1.3){
- return element('path',{d,fill,stroke,'stroke-width':strokeWidth,'stroke-linejoin':'round','stroke-linecap':'round'},parent);
+ const base=element('path',{d,fill,stroke,'stroke-width':strokeWidth,'stroke-linejoin':'round','stroke-linecap':'round'},parent);
+ const match=typeof fill==='string'&&fill.match(/^url\(#avatar-v2-grad-(top|bottom|shoes|outerwear)\)$/);
+ if(match&&activeTexturePatterns.has(match[1])){
+  const pattern=activeTexturePatterns.get(match[1]);
+  element('path',{d,fill:'url(#'+pattern.id+')','fill-opacity':pattern.opacity,stroke:'none'},parent);
+ }
+ return base;
 }
 function accent(parent,d,stroke,opacity=.33,width=1.2){const el=path(parent,d,'none',stroke,width);el.setAttribute('stroke-opacity',opacity);return el;}
 function gradient(category,base){
@@ -114,8 +120,65 @@ function garmentColor(item,cat){
  image.src=item.image;
  return fallback;
 }
+
+/* Retain details of the owner's actual garment, but clip them inside a consistent
+   illustrated silhouette. No network, no original image changes and no external API. */
+function texturePattern(item,cat){
+ const cached=textureCache.get(item.id);
+ if(cached&&cached.source===item.image){
+  if(!cached.texture)return;
+  const id='avatar-v3-texture-'+cat;
+  const defs=svg.querySelector('defs')||element('defs');
+  const pattern=element('pattern',{id,patternUnits:'userSpaceOnUse',width:180,height:365,x:0,y:0},defs);
+  const box={top:[26,80,128,135],outerwear:[20,78,140,144],bottom:[48,208,85,129],shoes:[32,324,126,35]}[cat];
+  element('image',{x:box[0],y:box[1],width:box[2],height:box[3],preserveAspectRatio:'none',href:cached.texture},pattern);
+  activeTexturePatterns.set(cat,{id,opacity:cat==='shoes'?.58:cat==='bottom'?.84:.83});
+  return;
+ }
+ if(!/^data:image\/(?:png|jpeg|jpg|webp);base64,/.test(item.image||''))return;
+ const record={source:item.image,texture:null};
+ textureCache.set(item.id,record);
+ // Cap the cache: clear old sessions; one item is processed once per app session.
+ if(textureCache.size>32)textureCache.delete(textureCache.keys().next().value);
+ const image=new Image();
+ image.onload=()=>{
+  try{
+   if(!image.naturalWidth||!image.naturalHeight)return;
+   const scan=document.createElement('canvas'),limit=360,ratio=Math.min(1,limit/Math.max(image.naturalWidth,image.naturalHeight));
+   scan.width=Math.max(1,Math.round(image.naturalWidth*ratio));
+   scan.height=Math.max(1,Math.round(image.naturalHeight*ratio));
+   const ctx=scan.getContext('2d',{willReadFrequently:true});if(!ctx)return;
+   ctx.drawImage(image,0,0,scan.width,scan.height);
+   const rgba=ctx.getImageData(0,0,scan.width,scan.height).data;
+   let minX=scan.width,minY=scan.height,maxX=-1,maxY=-1,total=0;
+   const count=scan.width*scan.height;
+   for(let y=0;y<scan.height;y++)for(let x=0;x<scan.width;x++){
+    if(rgba[(y*scan.width+x)*4+3]<55)continue;
+    total++;minX=Math.min(minX,x);maxX=Math.max(maxX,x);
+    minY=Math.min(minY,y);maxY=Math.max(maxY,y);
+   }
+   // Opaque screenshot backgrounds are unsuitable as garment textures.
+   if(total<count*.965||total<1){
+    if(maxX<minX||maxY<minY)return;
+    const output=document.createElement('canvas');
+    output.width=144;output.height=192;
+    const out=output.getContext('2d');if(!out)return;
+    out.filter='saturate(.88) contrast(.96)';
+    out.drawImage(scan,minX,minY,maxX-minX+1,maxY-minY+1,0,0,output.width,output.height);
+    const current=textureCache.get(item.id);
+    if(!current||current.source!==item.image)return;
+    current.texture=output.toDataURL('image/png');
+    drawAvatarV2();
+   }
+  }catch(e){console.warn('V3 local textile detail extraction skipped',e);}
+ };
+ image.onerror=()=>{};
+ image.src=item.image;
+}
+
 function topTemplate(item,cat){
  const sub=determineSubtype(item,cat),base=garmentColor(item,cat),fabric=gradient(cat,base);
+ texturePattern(item,cat);
  const group=element('g',{'data-avatar-slot':cat});
  const build=avatarProfile&&avatarProfile.build||'athletic';
  const bodyFactor={lean:.91,athletic:1,broad:1.09}[build]||1;
@@ -152,6 +215,7 @@ function topTemplate(item,cat){
 }
 function pantsTemplate(item){
  const cat='bottom',sub=determineSubtype(item,cat),base=garmentColor(item,cat),fabric=gradient(cat,base);
+ texturePattern(item,cat);
  const group=element('g',{'data-avatar-slot':cat});
  const build=avatarProfile&&avatarProfile.build||'athletic',shapeScale={lean:.93,athletic:1,broad:1.065}[build]||1;
  group.setAttribute('transform','translate(90 0) scale('+shapeScale+' 1) translate(-90 0)');
@@ -165,6 +229,7 @@ function pantsTemplate(item){
 }
 function shoesTemplate(item){
  const cat='shoes',base=garmentColor(item,cat),fabric=gradient(cat,base),sub=determineSubtype(item,cat);
+ texturePattern(item,cat);
  const group=element('g',{'data-avatar-slot':cat});
  if(sub==='boot'){
   path(group,'M57 315 L85 315 L89 348 Q89 358 81 358 L36 358 Q31 352 41 344 L55 335Z',fabric);
@@ -198,33 +263,100 @@ function refreshGarmentSubtype(){
  dropdown.value=group.some(([id])=>id===item?.avatarSubtype)?item.avatarSubtype:'';
 }
 window.refreshGarmentSubtype=refreshGarmentSubtype;
+/* Outfit Studio: one-tap garment cards and a shuffler inspired by the fast look
+   browsing workflow, not a copy of another app's art or UI. */
+function availableGarments(cat){return items.filter(it=>it.category===cat&&it.image);}
+function cycleOutfit(cat,step=1){
+ const available=availableGarments(cat), ids=['',...available.map(it=>it.id)];
+ if(ids.length<2)return;
+ const current=ids.indexOf(chosen[cat]||''),index=(current+step+ids.length)%ids.length;
+ choose(cat,ids[index]).catch(e=>console.error('Switch outfit garment failed',e));
+}
+async function shuffleOutfit(){
+ const updates={};let changed=false;
+ for(const cat of ['top','bottom','shoes','outerwear']){
+  const available=availableGarments(cat);if(!available.length)continue;
+  const options=available.map(it=>it.id);
+  if(cat==='outerwear')options.unshift('');
+  const others=options.filter(x=>x!==(chosen[cat]||''));
+  if(!others.length)continue;
+  const next=others[Math.floor(Math.random()*others.length)];
+  updates[cat]=next;
+  if(next!==(chosen[cat]||''))changed=true;
+ }
+ if(!changed)return toast('Für neue Kombinationen weitere Teile hinzufügen');
+ for(const [cat,id] of Object.entries(updates)){
+  if(!id)delete chosen[cat];
+  else {chosen[cat]=id;await ensureDefaultFit(cat,id);}
+ }
+ try{await persist();render();toast('Neuer Look aus deiner Garderobe');}
+ catch(e){console.error('Shuffle outfit failed',e);}
+}
+window.shuffleAvatarOutfit=shuffleOutfit;
 function quickPicker(){
  picker.replaceChildren();
+ const head=document.createElement('div');head.className='v3-studio-head';
+ const titles=document.createElement('div');
+ const overline=document.createElement('span');overline.className='v3-studio-kicker';overline.textContent='DEIN LOOK';
+ const caption=document.createElement('p');caption.className='v3-studio-caption';caption.textContent='Teil antippen und wechseln';
+ titles.append(overline,caption);
+ const actions=document.createElement('div');actions.className='v3-studio-actions';
+ const shuffle=document.createElement('button');shuffle.type='button';shuffle.className='secondary v3-shuffle';
+ shuffle.textContent='⤨ Mixen';shuffle.setAttribute('aria-label','Neuen Look aus meiner Kleidung kombinieren');
+ shuffle.onclick=()=>shuffleOutfit();
+ const canMix=['top','bottom','shoes'].some(cat=>availableGarments(cat).length>1)||availableGarments('outerwear').length>0;
+ shuffle.disabled=!canMix;
+ shuffle.title=canMix?'Neue Kombination aus deiner Garderobe':'Für neue Kombinationen mindestens zwei Teile einer Kategorie speichern';
+ const save=document.createElement('button');save.type='button';save.className='secondary v3-save';
+ save.textContent='♡ Sichern';save.setAttribute('aria-label','Aktuelles Outfit speichern');
+ save.onclick=()=>saveOutfit();
+ actions.append(shuffle,save);head.append(titles,actions);picker.append(head);
+ const content=document.createElement('div');content.className='v3-garment-grid';
+ let availableSlots=0;
  for(const [cat,label] of [['top','Oberteil'],['bottom','Hose'],['shoes','Schuhe'],['outerwear','Jacke']]){
-  const available=items.filter(it=>it.category===cat&&it.image);
+  const available=availableGarments(cat);
   if(!available.length&&!chosen[cat])continue;
-  const wrapper=document.createElement('label');wrapper.className='v2-choice';
-  const text=document.createElement('span');text.textContent=label;
-  const select=document.createElement('select');select.setAttribute('aria-label',label+' auswählen');
-  const none=document.createElement('option');none.value='';none.textContent='Ohne';select.append(none);
-  for(const it of available){const option=document.createElement('option');option.value=it.id;option.textContent=it.name||label;select.append(option);}
-  select.value=chosen[cat]||'';
-  select.onchange=()=>{choose(cat,select.value).catch(e=>console.error('Outfit selection failed',e));};
-  wrapper.append(text,select);picker.append(wrapper);
+  availableSlots++;
+  const selected=available.find(it=>it.id===chosen[cat]);
+  const card=document.createElement('button');card.type='button';card.className='v3-garment-card';
+  card.dataset.category=cat;
+  const thumb=document.createElement('span');thumb.className='v3-garment-thumb';
+  if(selected){
+   const img=document.createElement('img');img.src=selected.shopImage&&selected.showShop?selected.shopImage:selected.image;
+   img.alt='';img.loading='lazy';thumb.append(img);
+  }else{
+   const icon=document.createElement('span');icon.className='v3-empty-icon';icon.textContent=({top:'♟',bottom:'▥',shoes:'◡',outerwear:'▣'})[cat]||'◇';thumb.append(icon);
+  }
+  const info=document.createElement('span');info.className='v3-garment-info';
+  const category=document.createElement('span');category.className='v3-garment-type';category.textContent=label;
+  const name=document.createElement('span');name.className='v3-garment-name';name.textContent=selected?.name||'Nichts gewählt';
+  info.append(category,name);
+  const change=document.createElement('span');change.className='v3-garment-next';change.textContent='↻';
+  card.append(thumb,info,change);
+  card.setAttribute('aria-label',label+': '+(selected?.name||'Nichts')+'. Antippen für nächstes Teil');
+  card.onclick=()=>cycleOutfit(cat,1);
+  content.append(card);
  }
- picker.hidden=picker.children.length===0;
+ if(!availableSlots){
+  const empty=document.createElement('p');empty.className='v3-studio-empty';
+  empty.textContent='Deine Garderobe ist noch leer. Füge zuerst Kleidung hinzu.';content.append(empty);
+  shuffle.disabled=true;save.disabled=true;
+ }
+ picker.append(content);
+ picker.hidden=false;
 }
 function syncAvatarMode(){
  const mode=avatarRenderMode==='original'?'original':'stylized';
  modeSelect.value=mode;
  const useStyle=view==='styled'&&mode==='stylized';
  figure.classList.toggle('avatar-v2-stylized',useStyle);
+ document.getElementById('avatarPanel')?.classList.toggle('v3-studio-mode',useStyle);
  const edit=document.getElementById('avatar-adjust');
  if(edit)edit.hidden=view==='photo'||useStyle;
  svg.style.display=useStyle?'':'none';
 }
 function drawAvatarV2(){
- svg.replaceChildren();
+ svg.replaceChildren();activeTexturePatterns.clear();
  const active=c=>{const id=chosen[c];return id?items.find(it=>it.id===id&&it.category===c&&it.image):null};
  const bottom=active('bottom'),top=active('top'),shoe=active('shoes'),coat=active('outerwear');
  if(bottom)pantsTemplate(bottom);
