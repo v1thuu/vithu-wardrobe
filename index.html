@@ -150,6 +150,10 @@
 .closet-avatar .avatar-outfit{margin-top:16px;border:1px solid #464f48;border-radius:13px;padding:12px}
 .closet-avatar .avatar-outfit>summary{cursor:pointer;color:#c5ddc6;font-size:13px;font-weight:750}
 .closet-avatar .avatar-outfit[open]>.btnrow{margin:12px 0}
+.closet-import .smart-reject-folder .smart-card .btnrow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.closet-import .smart-reject-folder .smart-card .btnrow .reject-discard{color:#ffd6d6;background:#503236}
+.closet-import .smart-reject-folder .smart-card .btnrow button{width:100%;white-space:normal}
+@media(max-width:700px){.closet-import .smart-reject-folder .smart-card .btnrow{grid-template-columns:1fr}}
 </style></head><body>
 <header class="wardrobe-header"><h1>VITHU <span>WARDROBE</span></h1><details class="app-settings"><summary>⚙</summary><div class="btnrow"><button class="secondary" onclick="exportBackup()">↓ Backup</button><label class="filebutton secondary">↑ Backup laden<input type="file" accept="application/json,.json" onchange="importBackup(event)"></label></div><small>Deine Kleidung wird lokal auf diesem Gerät gespeichert.</small></details></header>
 <nav class="wardrobe-tabs" role="tablist" aria-label="Hauptnavigation"><button id="tab-wardrobe" role="tab" aria-selected="true" class="active" onclick="switchWardrobeTab('wardrobe')">👕 Garderobe</button><button id="tab-add" role="tab" aria-selected="false" class="secondary" onclick="switchWardrobeTab('add')">＋ Hinzufügen</button><button id="tab-avatar" role="tab" aria-selected="false" class="secondary" onclick="switchWardrobeTab('avatar')">◉ Avatar</button></nav>
@@ -966,7 +970,14 @@ function renderSmartSuggestions(){
   save.className=s.grade==='ready'?'':'secondary';
   save.onclick=()=>saveSuggestion(i);
   const refine=document.createElement('button');refine.className='secondary';refine.textContent='✏️ Korrigieren';refine.onclick=()=>refineSuggestion(i);
-  actions.append(save,refine);
+  if(s.grade==='reject'){
+   const discardDirect=document.createElement('button');
+   discardDirect.className='secondary reject-discard';
+   discardDirect.textContent='🗑 Verwerfen';
+   discardDirect.setAttribute('aria-label','Fehl-Erkennung verwerfen');
+   discardDirect.onclick=()=>dropSuggestion(i);
+   actions.append(refine,discardDirect);
+  }else actions.append(save,refine);
   if(s.source!=='shop-auto'){
    const quality=document.createElement('button');
    quality.className='secondary smart-quality-btn';
@@ -980,7 +991,7 @@ function renderSmartSuggestions(){
   const input=document.createElement('input');input.id='sg-name-'+i;input.value=s.name;labelName.append(input);
   const labelCat=document.createElement('label');labelCat.className='f';labelCat.textContent='Kategorie';
   const select=document.createElement('select');select.id='sg-cat-'+i;select.innerHTML=categoryOptions(s.category);labelCat.append(select);
-  const discard=document.createElement('button');discard.className='secondary';discard.textContent='Verwerfen';discard.onclick=()=>dropSuggestion(i);
+  const discard=document.createElement('button');discard.className='secondary';discard.textContent='Verwerfen';discard.onclick=()=>dropSuggestion(i);if(s.grade==='reject')discard.hidden=true;
   if(s.source==='shop-auto'){more.append(summary,labelName,discard);d.append(name,hint,labelCat,actions,more)}
   else{more.append(summary,labelName,labelCat,discard,el._qualityButton);d.append(more)}
   el.append(img,d);parent.append(el);
@@ -995,7 +1006,7 @@ function renderSmartSuggestions(){
  }
  if(rejected.length){
   const box=document.createElement('details');box.className='smart-review-folder smart-reject-folder';
-  const title=document.createElement('summary');title.textContent='⛔ '+rejected.length+' unbrauchbar';
+  const title=document.createElement('summary');title.textContent='⛔ '+rejected.length+' Fehl-Erkennung'+(rejected.length===1?'':'en')+' · verwerfen';
   const cards=document.createElement('div');cards.className='grid smart-review-grid';
   smartSuggestions.forEach((s,i)=>{if(s.grade==='reject')section(cards,s,i)});
   box.append(title,cards);grid.append(box);
@@ -1041,7 +1052,14 @@ function resolveReviewSave(action){
  if(action==='fix'&&idx>=0)refineSuggestion(idx);
 }
 async function saveSuggestion(i){const s=smartSuggestions[i];if(!s)return;if(tierFromCandidate(s).grade==='reject')return toast('Bitte zuerst korrigieren');if(tierFromCandidate(s).grade!=='ready'&&(await requestReviewSave(i))!=='save')return;const name=$('sg-name-'+i)?.value?.trim()||s.name;const category=$('sg-cat-'+i)?.value||s.category;const clean=await createCleanProductImage(s.image,category).catch(()=>null);items.unshift({id:uid(),name,category,image:s.image,source:s.source==='shop-auto'?'shop-auto':'worn-auto',model:s.hybridEngine||undefined,clipped:!!s.clipped,shopImage:clean||undefined,showShop:!!clean});smartSuggestions.splice(i,1);await persist();render();renderSmartSuggestions();$('smartImportStatus').textContent=smartSuggestions.length?'Vorschlag gespeichert. Du kannst die restlichen speichern oder verwerfen.':'Alle Vorschläge verarbeitet.';if(!smartSuggestions.length)$('smartImportBox').style.display='none';toast('Vorschlag gespeichert')}
-function dropSuggestion(i){smartSuggestions.splice(i,1);renderSmartSuggestions();$('smartImportStatus').style.display='block';$('smartImportStatus').textContent=smartSuggestions.length?'Vorschlag verworfen.':'Keine Vorschläge mehr vorhanden.';if(!smartSuggestions.length)$('smartImportBox').style.display='none'}
+function dropSuggestion(i){
+ const part=smartSuggestions[i];if(!part)return;
+ smartSuggestions.splice(i,1);renderSmartSuggestions();
+ $('smartImportStatus').style.display='block';
+ $('smartImportStatus').textContent=smartSuggestions.length?'Fehl-Erkennung entfernt':'Fertig';
+ if(!smartSuggestions.length)$('smartImportBox').style.display='none';
+ toast('Verworfen');
+}
 async function saveAllSuggestions(){
  const approved=smartSuggestions.filter(s=>tierFromCandidate(s).grade==='ready');
  if(!approved.length)return toast('Keine unauffälligen Teile zum Speichern');
