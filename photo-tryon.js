@@ -45,8 +45,10 @@ function photoFitFor(id){
  const f=photoFits&&photoFits[id];
  return f&&finite(f.dx)&&finite(f.dy)&&finite(f.scale)?f:{dx:0,dy:0,scale:1};
 }
+let photoAutoPopulated=false;
 function ensurePhotoOutfit(){
- if(!personPhoto||!items.length)return false;
+ if(!personPhoto||!items.length||photoAutoPopulated)return false;
+ photoAutoPopulated=true;
  // Never replace an explicitly selected category; fill only empty outfit slots.
  let changed=false;
  for(const cat of ['top','bottom','shoes','outerwear']){
