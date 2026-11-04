@@ -151,14 +151,15 @@ function cropRegion(scan,bounds,region){
 }
 function texturePattern(item,cat){
  const source=item.image||'';
- const existing=textureCache.get(item.id);
+ const key=cat+':'+item.id;
+ const existing=textureCache.get(key);
  if(existing&&existing.source===source){
   if(existing.zones)activeTexturePatterns.set(cat,existing.zones);
   return;
  }
  if(!/^data:image\/(?:png|jpeg|jpg|webp);base64,/.test(source))return;
  const record={source,zones:null,pending:true};
- textureCache.set(item.id,record);
+ textureCache.set(key,record);
  if(textureCache.size>24)textureCache.delete(textureCache.keys().next().value);
  const image=new Image();
  image.onload=()=>{
@@ -177,13 +178,13 @@ function texturePattern(item,cat){
     const texture=cropRegion(scan,bounds,region);
     if(texture)zones[name]=texture;
    }
-   const current=textureCache.get(item.id);
+   const current=textureCache.get(key);
    if(!current||current.source!==source)return;
    current.zones=zones;current.pending=false;
    drawAvatarV2();
   }catch(e){console.warn('Local split texture unavailable, using colour fallback',e);}
  };
- image.onerror=()=>{const current=textureCache.get(item.id);if(current&&current.source===source)current.pending=false;};
+ image.onerror=()=>{const current=textureCache.get(key);if(current&&current.source===source)current.pending=false;};
  image.src=source;
 }
 function panel(parent,cat,part,d,base,rect,opacity=.86){
