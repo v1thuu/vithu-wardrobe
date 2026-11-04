@@ -159,6 +159,13 @@
 .closet-avatar .avatar-sliders{border:1px solid #536455;border-radius:11px;padding:10px 12px}
 .closet-avatar .avatar-sliders>summary{font-size:12px;cursor:pointer;color:#c9e4c7}
 .closet-avatar .avatar-sliders>.form{margin-top:12px}
+.figure .torso{background:linear-gradient(110deg,#545e6c,#69717c 54%,#505969);clip-path:polygon(24% 0,76% 0,96% 8%,100% 84%,88% 96%,12% 96%,0 84%,4% 8%);border-radius:27px 27px 18px 18px}
+.figure .arm{width:25px;background:linear-gradient(90deg,#916950,#bd8e73 52%,#a57860);border-radius:18px}
+.figure .arm.left{left:10px;transform:rotate(8deg)}.figure .arm.right{right:10px;transform:rotate(-8deg)}
+.figure .leg{background:linear-gradient(90deg,#3a414f,#555d6a 52%,#404858)}
+.figure .wear.top{top:72px;left:18px;width:145px;height:161px}
+.figure .wear.bottom{top:211px;left:25px;width:130px;height:132px}
+.figure .wear.shoes{top:326px;left:12px;width:156px;height:37px}
 </style></head><body>
 <header class="wardrobe-header"><h1>VITHU <span>WARDROBE</span></h1><details class="app-settings"><summary>⚙</summary><div class="btnrow"><button class="secondary" onclick="exportBackup()">↓ Backup</button><label class="filebutton secondary">↑ Backup laden<input type="file" accept="application/json,.json" onchange="importBackup(event)"></label></div><small>Deine Kleidung wird lokal auf diesem Gerät gespeichert.</small></details></header>
 <nav class="wardrobe-tabs" role="tablist" aria-label="Hauptnavigation"><button id="tab-wardrobe" role="tab" aria-selected="true" class="active" onclick="switchWardrobeTab('wardrobe')">👕 Garderobe</button><button id="tab-add" role="tab" aria-selected="false" class="secondary" onclick="switchWardrobeTab('add')">＋ Hinzufügen</button><button id="tab-avatar" role="tab" aria-selected="false" class="secondary" onclick="switchWardrobeTab('avatar')">◉ Avatar</button></nav>
