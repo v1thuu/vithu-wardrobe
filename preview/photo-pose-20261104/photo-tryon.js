@@ -45,10 +45,49 @@ function photoFitFor(id){
  const f=photoFits&&photoFits[id];
  return f&&finite(f.dx)&&finite(f.dy)&&finite(f.scale)?f:{dx:0,dy:0,scale:1};
 }
+let photoAutoPopulated=false;
+function ensurePhotoOutfit(){
+ if(!personPhoto||!items.length||photoAutoPopulated)return false;
+ photoAutoPopulated=true;
+ // Never replace an explicitly selected category; fill only empty outfit slots.
+ let changed=false;
+ for(const cat of ['top','bottom','shoes','outerwear']){
+  if(chosen[cat]&&items.some(it=>it.id===chosen[cat]&&it.category===cat))continue;
+  const candidate=items.find(it=>it.category===cat&&it.image);
+  if(candidate){chosen[cat]=candidate.id;changed=true;}
+ }
+ if(changed)persist().catch(e=>console.error('Automatic outfit save failed',e));
+ return changed;
+}
+const photoPicker=document.getElementById('photoOutfitPicker');
+function renderPhotoPicker(){
+ if(!photoPicker)return;
+ photoPicker.replaceChildren();
+ const categories=['top','bottom','shoes','outerwear'];
+ for(const cat of categories){
+  const available=items.filter(it=>it.category===cat&&it.image);
+  if(!available.length)continue;
+  const label=document.createElement('label');label.className='photo-pick-label';
+  label.textContent=cats[cat]||cat;
+  const select=document.createElement('select');
+  select.setAttribute('aria-label',(cats[cat]||cat)+' für Foto-Anprobe');
+  const none=document.createElement('option');none.value='';none.textContent='Ohne';select.append(none);
+  for(const item of available){const opt=document.createElement('option');opt.value=item.id;opt.textContent=item.name||cats[cat];select.append(opt);}
+  select.value=chosen[cat]||'';
+  select.addEventListener('change',()=>{
+   if(select.value)chosen[cat]=select.value;else delete chosen[cat];
+   persist().catch(e=>console.error('Outfit selection save failed',e));
+   renderPhotoTryOn();
+  });
+  label.append(select);photoPicker.append(label);
+ }
+ photoPicker.hidden=!photoPicker.childElementCount;
+}
 function renderPhotoTryOn(){
  const shown=view==='photo'&&!!personPhoto;
  frame.hidden=!personPhoto;
- photoStatus.textContent=!personPhoto?'Ganzkörperfoto auswählen':photoPose?'Körperpunkte erkannt · Kleidungsstücke lassen sich ziehen.':'Kleidung grob platziert · für genauere Position einmal automatisch ausrichten.';
+ if(shown)ensurePhotoOutfit();
+ renderPhotoPicker();
  const active=new Set();
  if(shown){
   for(const [cat,id] of Object.entries(chosen)){
@@ -69,6 +108,7 @@ function renderPhotoTryOn(){
   }
  }
  for(const el of [...layer.children])if(!active.has(el.dataset.garmentId))el.remove();
+ photoStatus.textContent=!personPhoto?'Ganzkörperfoto auswählen':!items.length?'Noch keine Kleidung gespeichert. Zuerst Jeans, Schuhe oder Oberteil unter Hinzufügen speichern.':!active.size?'Kein Outfit ausgewählt. Wähle unten ein Kleidungsstück.':photoPose?active.size+' Kleidungsstück(e) auf deinem Foto · Körperpunkte erkannt.':active.size+' Kleidungsstück(e) auf deinem Foto · Ausrichten für präzisere Position.';
 }
 const oldRenderPerson=renderPerson;
 renderPerson=function(){oldRenderPerson();renderPhotoTryOn();};
@@ -114,7 +154,7 @@ async function autoAlignPhoto(){
   photoFits={};
   await persist();
   renderPhotoTryOn();
-  toast('Körperpunkte erkannt · Outfit ausgerichtet');
+  toast(layer.children.length?'Körperpunkte erkannt · '+layer.children.length+' Kleidungsstück(e) platziert':'Körperpunkte erkannt · erst Kleidung speichern');
  }catch(e){
   console.error('Photo try-on pose fit failed',e);
   photoStatus.textContent='Automatische Ausrichtung nicht möglich: '+(e?.message||'Modell nicht verfügbar')+' · Kleidung bleibt manuell verschiebbar.';
