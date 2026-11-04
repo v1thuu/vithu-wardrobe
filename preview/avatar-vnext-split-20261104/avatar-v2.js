@@ -308,6 +308,7 @@ function refreshGarmentSubtype(){
  const auto=document.createElement('option');auto.value='';auto.textContent='Automatisch';dropdown.append(auto);
  for(const [id,label] of group){const opt=document.createElement('option');opt.value=id;opt.textContent=label;dropdown.append(opt);}
  wrapper.hidden=!group.length;
+ const tuning=document.getElementById('invAvatarTuning');if(tuning)tuning.hidden=!group.length;
  const item=items.find(it=>it.id===inventoryEditId);
  dropdown.value=group.some(([id])=>id===item?.avatarSubtype)?item.avatarSubtype:'';
 }
