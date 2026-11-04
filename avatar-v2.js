@@ -30,13 +30,7 @@ function element(tag,attrs={},parent=svg){
  parent.append(e);return e;
 }
 function path(parent,d,fill,stroke='#1a2027',strokeWidth=1.3){
- const base=element('path',{d,fill,stroke,'stroke-width':strokeWidth,'stroke-linejoin':'round','stroke-linecap':'round'},parent);
- const match=typeof fill==='string'&&fill.match(/^url\(#avatar-v2-grad-(top|bottom|shoes|outerwear)\)$/);
- if(match&&activeTexturePatterns.has(match[1])){
-  const pattern=activeTexturePatterns.get(match[1]);
-  element('path',{d,fill:'url(#'+pattern.id+')','fill-opacity':pattern.opacity,stroke:'none'},parent);
- }
- return base;
+ return element('path',{d,fill,stroke,'stroke-width':strokeWidth,'stroke-linejoin':'round','stroke-linecap':'round'},parent);
 }
 function accent(parent,d,stroke,opacity=.33,width=1.2){const el=path(parent,d,'none',stroke,width);el.setAttribute('stroke-opacity',opacity);return el;}
 function gradient(category,base){
@@ -121,61 +115,99 @@ function garmentColor(item,cat){
  return fallback;
 }
 
-/* Retain details of the owner's actual garment, but clip them inside a consistent
-   illustrated silhouette. No network, no original image changes and no external API. */
+/* Per-zone texture pipeline: analyse only the saved transparent garment image.
+   No user-photo uploads, no third-party API, no mutations of the original PNG.
+   Each body part uses an independent crop and an independent SVG clip silhouette. */
+const regionDefs={
+ top:{body:[.19,.15,.62,.82],leftSleeve:[.01,.17,.33,.39],rightSleeve:[.66,.17,.33,.39],logo:[.58,.21,.31,.26]},
+ outerwear:{body:[.17,.12,.66,.87],leftSleeve:[0,.20,.30,.62],rightSleeve:[.70,.20,.30,.62]},
+ bottom:{waist:[.04,.015,.92,.28],leftLeg:[.02,.25,.48,.74],rightLeg:[.50,.25,.48,.74]},
+ shoes:{leftShoe:[.01,.03,.48,.94],rightShoe:[.51,.03,.48,.94]}
+};
+function detectAlphaBounds(pixels,w,h){
+ if(!pixels||!w||!h)return null;
+ let minX=w,minY=h,maxX=-1,maxY=-1,n=0;
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+  if(pixels[(y*w+x)*4+3]<70)continue;
+  n++;if(x<minX)minX=x;if(x>maxX)maxX=x;
+  if(y<minY)minY=y;if(y>maxY)maxY=y;
+ }
+ if(n<10||n/(w*h)>.965||maxX<minX||maxY<minY)return null;
+ return {x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1};
+}
+function cropRegion(scan,bounds,region){
+ const [rx,ry,rw,rh]=region;
+ const left=Math.max(0,Math.floor(bounds.x+bounds.w*rx)),
+       top=Math.max(0,Math.floor(bounds.y+bounds.h*ry));
+ const width=Math.min(scan.width-left,Math.max(1,Math.round(bounds.w*rw))),
+       height=Math.min(scan.height-top,Math.max(1,Math.round(bounds.h*rh)));
+ if(width<=0||height<=0)return null;
+ const out=document.createElement('canvas');
+ out.width=112;out.height=152;
+ const ctx=out.getContext('2d');if(!ctx)return null;
+ ctx.filter='saturate(.93) contrast(1.10)';
+ ctx.drawImage(scan,left,top,width,height,0,0,out.width,out.height);
+ return out.toDataURL('image/png');
+}
 function texturePattern(item,cat){
- const cached=textureCache.get(item.id);
- if(cached&&cached.source===item.image){
-  if(!cached.texture)return;
-  const id='avatar-v3-texture-'+cat;
-  const defs=svg.querySelector('defs')||element('defs');
-  const pattern=element('pattern',{id,patternUnits:'userSpaceOnUse',width:180,height:365,x:0,y:0},defs);
-  const box={top:[26,80,128,135],outerwear:[20,78,140,144],bottom:[48,208,85,129],shoes:[32,324,126,35]}[cat];
-  element('image',{x:box[0],y:box[1],width:box[2],height:box[3],preserveAspectRatio:'none',href:cached.texture},pattern);
-  activeTexturePatterns.set(cat,{id,opacity:cat==='shoes'?.58:cat==='bottom'?.84:.83});
+ const source=item.image||'';
+ const existing=textureCache.get(item.id);
+ if(existing&&existing.source===source){
+  if(existing.zones)activeTexturePatterns.set(cat,existing.zones);
   return;
  }
- if(!/^data:image\/(?:png|jpeg|jpg|webp);base64,/.test(item.image||''))return;
- const record={source:item.image,texture:null};
+ if(!/^data:image\/(?:png|jpeg|jpg|webp);base64,/.test(source))return;
+ const record={source,zones:null,pending:true};
  textureCache.set(item.id,record);
- // Cap the cache: clear old sessions; one item is processed once per app session.
- if(textureCache.size>32)textureCache.delete(textureCache.keys().next().value);
+ if(textureCache.size>24)textureCache.delete(textureCache.keys().next().value);
  const image=new Image();
  image.onload=()=>{
   try{
    if(!image.naturalWidth||!image.naturalHeight)return;
-   const scan=document.createElement('canvas'),limit=360,ratio=Math.min(1,limit/Math.max(image.naturalWidth,image.naturalHeight));
-   scan.width=Math.max(1,Math.round(image.naturalWidth*ratio));
-   scan.height=Math.max(1,Math.round(image.naturalHeight*ratio));
+   const scan=document.createElement('canvas');
+   const factor=Math.min(1,380/Math.max(image.naturalWidth,image.naturalHeight));
+   scan.width=Math.max(1,Math.round(image.naturalWidth*factor));
+   scan.height=Math.max(1,Math.round(image.naturalHeight*factor));
    const ctx=scan.getContext('2d',{willReadFrequently:true});if(!ctx)return;
    ctx.drawImage(image,0,0,scan.width,scan.height);
-   const rgba=ctx.getImageData(0,0,scan.width,scan.height).data;
-   let minX=scan.width,minY=scan.height,maxX=-1,maxY=-1,total=0;
-   const count=scan.width*scan.height;
-   for(let y=0;y<scan.height;y++)for(let x=0;x<scan.width;x++){
-    if(rgba[(y*scan.width+x)*4+3]<55)continue;
-    total++;minX=Math.min(minX,x);maxX=Math.max(maxX,x);
-    minY=Math.min(minY,y);maxY=Math.max(maxY,y);
+   const bounds=detectAlphaBounds(ctx.getImageData(0,0,scan.width,scan.height).data,scan.width,scan.height);
+   if(!bounds)return;
+   const zones={};
+   for(const [name,region] of Object.entries(regionDefs[cat]||{})){
+    const texture=cropRegion(scan,bounds,region);
+    if(texture)zones[name]=texture;
    }
-   // Opaque screenshot backgrounds are unsuitable as garment textures.
-   if(total<count*.965||total<1){
-    if(maxX<minX||maxY<minY)return;
-    const output=document.createElement('canvas');
-    output.width=144;output.height=192;
-    const out=output.getContext('2d');if(!out)return;
-    out.filter='saturate(.88) contrast(.96)';
-    out.drawImage(scan,minX,minY,maxX-minX+1,maxY-minY+1,0,0,output.width,output.height);
-    const current=textureCache.get(item.id);
-    if(!current||current.source!==item.image)return;
-    current.texture=output.toDataURL('image/png');
-    drawAvatarV2();
-   }
-  }catch(e){console.warn('V3 local textile detail extraction skipped',e);}
+   const current=textureCache.get(item.id);
+   if(!current||current.source!==source)return;
+   current.zones=zones;current.pending=false;
+   drawAvatarV2();
+  }catch(e){console.warn('Local split texture unavailable, using colour fallback',e);}
  };
- image.onerror=()=>{};
- image.src=item.image;
+ image.onerror=()=>{const current=textureCache.get(item.id);if(current&&current.source===source)current.pending=false;};
+ image.src=source;
 }
-
+function panel(parent,cat,part,d,base,rect,opacity=.86){
+ const solid=path(parent,d,base);
+ const zones=activeTexturePatterns.get(cat);
+ const uri=zones&&zones[part];
+ if(!uri)return solid;
+ const id='avatar-vnext-'+cat+'-'+part;
+ const defs=svg.querySelector('defs')||element('defs');
+ const pattern=element('pattern',{id,x:0,y:0,width:180,height:365,patternUnits:'userSpaceOnUse'},defs);
+ element('image',{x:rect[0],y:rect[1],width:rect[2],height:rect[3],href:uri,preserveAspectRatio:'none'},pattern);
+ element('path',{d,fill:'url(#'+id+')','fill-opacity':opacity,stroke:'none'},parent);
+ return solid;
+}
+function fitSettings(item){
+ const fit=item.avatarFitV2&&typeof item.avatarFitV2==='object'?item.avatarFitV2:{};
+ const length=['short','regular','long'].includes(fit.length)?fit.length:'regular';
+ const details=['auto','smooth','detailed'].includes(fit.details)?fit.details:'auto';
+ return {length,details};
+}
+function fabricOpacity(item,cat){
+ const details=fitSettings(item).details;
+ return details==='smooth'?0:details==='detailed'?1:cat==='shoes'?.9:.84;
+}
 function topTemplate(item,cat){
  const sub=determineSubtype(item,cat),base=garmentColor(item,cat),fabric=gradient(cat,base);
  texturePattern(item,cat);
