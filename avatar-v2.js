@@ -263,27 +263,91 @@ function refreshGarmentSubtype(){
  dropdown.value=group.some(([id])=>id===item?.avatarSubtype)?item.avatarSubtype:'';
 }
 window.refreshGarmentSubtype=refreshGarmentSubtype;
+/* Outfit Studio: one-tap garment cards and a shuffler inspired by the fast look
+   browsing workflow, not a copy of another app's art or UI. */
+function availableGarments(cat){return items.filter(it=>it.category===cat&&it.image);}
+function cycleOutfit(cat,step=1){
+ const available=availableGarments(cat), ids=['',...available.map(it=>it.id)];
+ if(ids.length<2)return;
+ const current=ids.indexOf(chosen[cat]||''),index=(current+step+ids.length)%ids.length;
+ choose(cat,ids[index]).catch(e=>console.error('Switch outfit garment failed',e));
+}
+async function shuffleOutfit(){
+ const updates={};let changed=false;
+ for(const cat of ['top','bottom','shoes','outerwear']){
+  const available=availableGarments(cat);if(!available.length)continue;
+  const options=available.map(it=>it.id);
+  if(cat==='outerwear')options.unshift('');
+  const others=options.filter(x=>x!==(chosen[cat]||''));
+  if(!others.length)continue;
+  const next=others[Math.floor(Math.random()*others.length)];
+  updates[cat]=next;
+  if(next!==(chosen[cat]||''))changed=true;
+ }
+ if(!changed)return toast('Für neue Kombinationen weitere Teile hinzufügen');
+ for(const [cat,id] of Object.entries(updates)){
+  if(!id)delete chosen[cat];
+  else {chosen[cat]=id;await ensureDefaultFit(cat,id);}
+ }
+ try{await persist();render();toast('Neuer Look aus deiner Garderobe');}
+ catch(e){console.error('Shuffle outfit failed',e);}
+}
+window.shuffleAvatarOutfit=shuffleOutfit;
 function quickPicker(){
  picker.replaceChildren();
+ const head=document.createElement('div');head.className='v3-studio-head';
+ const titles=document.createElement('div');
+ const overline=document.createElement('span');overline.className='v3-studio-kicker';overline.textContent='DEIN LOOK';
+ const caption=document.createElement('p');caption.className='v3-studio-caption';caption.textContent='Teil antippen und wechseln';
+ titles.append(overline,caption);
+ const actions=document.createElement('div');actions.className='v3-studio-actions';
+ const shuffle=document.createElement('button');shuffle.type='button';shuffle.className='secondary v3-shuffle';
+ shuffle.textContent='⤨ Mixen';shuffle.setAttribute('aria-label','Neuen Look aus meiner Kleidung kombinieren');
+ shuffle.onclick=()=>shuffleOutfit();
+ const save=document.createElement('button');save.type='button';save.className='secondary v3-save';
+ save.textContent='♡ Sichern';save.setAttribute('aria-label','Aktuelles Outfit speichern');
+ save.onclick=()=>saveOutfit();
+ actions.append(shuffle,save);head.append(titles,actions);picker.append(head);
+ const content=document.createElement('div');content.className='v3-garment-grid';
+ let availableSlots=0;
  for(const [cat,label] of [['top','Oberteil'],['bottom','Hose'],['shoes','Schuhe'],['outerwear','Jacke']]){
-  const available=items.filter(it=>it.category===cat&&it.image);
+  const available=availableGarments(cat);
   if(!available.length&&!chosen[cat])continue;
-  const wrapper=document.createElement('label');wrapper.className='v2-choice';
-  const text=document.createElement('span');text.textContent=label;
-  const select=document.createElement('select');select.setAttribute('aria-label',label+' auswählen');
-  const none=document.createElement('option');none.value='';none.textContent='Ohne';select.append(none);
-  for(const it of available){const option=document.createElement('option');option.value=it.id;option.textContent=it.name||label;select.append(option);}
-  select.value=chosen[cat]||'';
-  select.onchange=()=>{choose(cat,select.value).catch(e=>console.error('Outfit selection failed',e));};
-  wrapper.append(text,select);picker.append(wrapper);
+  availableSlots++;
+  const selected=available.find(it=>it.id===chosen[cat]);
+  const card=document.createElement('button');card.type='button';card.className='v3-garment-card';
+  card.dataset.category=cat;
+  const thumb=document.createElement('span');thumb.className='v3-garment-thumb';
+  if(selected){
+   const img=document.createElement('img');img.src=selected.shopImage&&selected.showShop?selected.shopImage:selected.image;
+   img.alt='';img.loading='lazy';thumb.append(img);
+  }else{
+   const icon=document.createElement('span');icon.className='v3-empty-icon';icon.textContent=({top:'♟',bottom:'▥',shoes:'◡',outerwear:'▣'})[cat]||'◇';thumb.append(icon);
+  }
+  const info=document.createElement('span');info.className='v3-garment-info';
+  const category=document.createElement('span');category.className='v3-garment-type';category.textContent=label;
+  const name=document.createElement('span');name.className='v3-garment-name';name.textContent=selected?.name||'Nichts gewählt';
+  info.append(category,name);
+  const change=document.createElement('span');change.className='v3-garment-next';change.textContent='↻';
+  card.append(thumb,info,change);
+  card.setAttribute('aria-label',label+': '+(selected?.name||'Nichts')+'. Antippen für nächstes Teil');
+  card.onclick=()=>cycleOutfit(cat,1);
+  content.append(card);
  }
- picker.hidden=picker.children.length===0;
+ if(!availableSlots){
+  const empty=document.createElement('p');empty.className='v3-studio-empty';
+  empty.textContent='Deine Garderobe ist noch leer. Füge zuerst Kleidung hinzu.';content.append(empty);
+  shuffle.disabled=true;save.disabled=true;
+ }
+ picker.append(content);
+ picker.hidden=false;
 }
 function syncAvatarMode(){
  const mode=avatarRenderMode==='original'?'original':'stylized';
  modeSelect.value=mode;
  const useStyle=view==='styled'&&mode==='stylized';
  figure.classList.toggle('avatar-v2-stylized',useStyle);
+ document.getElementById('avatarPanel')?.classList.toggle('v3-studio-mode',useStyle);
  const edit=document.getElementById('avatar-adjust');
  if(edit)edit.hidden=view==='photo'||useStyle;
  svg.style.display=useStyle?'':'none';
