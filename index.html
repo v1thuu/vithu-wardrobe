@@ -464,7 +464,7 @@ function tierFromCandidate(s){
  // Heuristic triage, NOT calibrated model confidence.
  if(s.hybridInvalid)return {grade:'reject',reason:s.hybridReason||'Keine brauchbare Maske'};
  if(s.hybridReview)return {grade:'review',reason:s.hybridReason||'Bitte prüfen'};
- if(s.quality?.suspicious)return {grade:'reject',reason:'Möglicher Arm statt Hose'};
+ if(s.quality?.suspicious)return {grade:'review',reason:'Form prüfen'};
  if(s.reviewNeeded)return {grade:'review',reason:s.warning||'Körperbereich überlappt'};
  if(s.clipped)return {grade:'review',reason:'Am Bildrand abgeschnitten'};
  if(s.source==='shop-auto')return {grade:'review',reason:'Kategorie prüfen'};
@@ -619,9 +619,10 @@ function assessGarmentCandidate(candidate,pixels,w,h,bodyMask){
  }
  const bodyShare=n?body/n:0;
  const lower=candidate.category==='bottom';
- const thin=ratio<.36,sideStrip=(cx<.28||cx>.72)&&ratio<.53;
- const upperBody=cy<.52;
- const suspicious=lower&&(thin||sideStrip||(upperBody&&ratio<.85));
+ const fullPants=lower&&b.height/h>.43&&cx>.30&&cx<.70&&ratio>.23;
+ const thin=ratio<.25,sideStrip=(cx<.25||cx>.75)&&ratio<.53;
+ const upperBody=cy<.40&&b.height/h<.42;
+ const suspicious=lower&&!fullPants&&(thin||sideStrip||upperBody);
  const bodyUncertain=bodyShare>.22&&candidate.category!=='shoes';
  const reviewNeeded=Boolean(suspicious||bodyUncertain);
  const clipped=Boolean(candidate.clipped);
@@ -716,12 +717,13 @@ function chooseHybridKind(stats,override=hybridPhotoKind){
 }
 function hybridCandidateVerdict(c,category,imageHeight){
  if(!c)return {ok:false,reason:'Nicht erkannt'};
- if(c.quality?.suspicious)return {ok:false,reason:'Körperteil statt Kleidung möglich'};
+ const fullPants=category==='bottom'&&c.bounds?.height/imageHeight>.43&&c.bounds?.width/c.bounds?.height>.23;
+ if(c.quality?.suspicious&&!fullPants)return {ok:false,reason:'Körperteil statt Kleidung möglich'};
  const b=c.bounds;
  if(!b||!Number.isFinite(b.width)||!Number.isFinite(b.height))return {ok:false,reason:'Ungültige Form'};
  const ratio=b.width/Math.max(1,b.height),relHeight=b.height/Math.max(1,imageHeight);
  if(category==='bottom'){
-  if(ratio<.30)return {ok:false,reason:'Armförmige Hose'};
+  if(ratio<.24)return {ok:false,reason:'Armförmige Hose'};
   if(relHeight<.16)return {ok:false,reason:'Kleines Hosenfragment'};
   if(ratio>2.2&&relHeight<.30)return {ok:false,reason:'Flacher Hosenstreifen'};
  }else if(category==='top'){
@@ -745,7 +747,7 @@ function mergeHybridCandidates(b2,b4,kind,imageHeight){
   const reason=engine==='B4'?vb.reason:va.reason;
   merged.push({...selected,hybridEngine:engine,
    source:engine==='B4'?'fashn-q8':selected.source,
-   hybridInvalid:!ok,hybridReview:ok&&Boolean(selected.clipped),
+   hybridInvalid:!ok,hybridReview:ok&&Boolean(selected.clipped||selected.quality?.suspicious),
    hybridReason:!ok?'Kein brauchbarer Vorschlag · '+reason:selected.clipped?'Bildrand abgeschnitten':''});
  }
  return merged.sort((a,b)=>b.area-a.area);
