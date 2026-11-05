@@ -31,11 +31,47 @@ function alphaBounds(pixels,width,height){
  if(regionWidth<6||regionHeight<6)return null;
  return {x:minX,y:minY,width:regionWidth,height:regionHeight,coverage:opaque/(width*height)};
 }
+
+/* Two distinct transparent shoe islands can be anchored to each ankle.
+   Product pictures with no real gap still use the original complete image. */
+function findShoeParts(pixels,width,height,bounds){
+ if(!bounds||!pixels)return null;
+ const left=Math.round(bounds.x),right=Math.round(bounds.x+bounds.width-1);
+ const first=Math.round(left+bounds.width*.28),last=Math.round(left+bounds.width*.72);
+ let bestStart=-1,bestEnd=-1,start=-1;
+ const maxCoverage=Math.max(1,Math.floor(bounds.height*.016));
+ for(let x=first;x<=last+1;x++){
+  let ink=0;
+  if(x<=last)for(let y=bounds.y;y<bounds.y+bounds.height;y++)
+   if(pixels[(y*width+x)*4+3]>70)ink++;
+  if(x<=last&&ink<=maxCoverage){if(start<0)start=x;}
+  else if(start>=0){
+   if(x-start>bestEnd-bestStart){bestStart=start;bestEnd=x-1;}
+   start=-1;
+  }
+ }
+ if(bestStart<0||bestEnd-bestStart+1<Math.max(2,Math.round(bounds.width*.035)))return null;
+ const splitX=Math.round((bestStart+bestEnd)/2);
+ const regions=[{x0:left,x1:splitX-1},{x0:splitX+1,x1:right}];
+ const parts=[];
+ for(const region of regions){
+  let minX=width,maxX=-1,minY=height,maxY=-1,area=0;
+  for(let y=bounds.y;y<bounds.y+bounds.height;y++)for(let x=region.x0;x<=region.x1;x++){
+   if(pixels[(y*width+x)*4+3]<=70)continue;
+   area++;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);
+  }
+  if(maxX<minX||area<bounds.width*bounds.height*.025)return null;
+  parts.push({x:minX,y:minY,width:maxX-minX+1,height:maxY-minY+1,area});
+ }
+ if(parts[0].x+parts[0].width>parts[1].x||
+    Math.min(parts[0].area,parts[1].area)<.13*(parts[0].area+parts[1].area))return null;
+ return parts;
+}
 function analyze(item,category){
  if(!item||!/^data:image\/(?:png|webp|jpe?g);base64,/i.test(item.image||''))return null;
  const key=category+':'+item.id,seen=cache.get(key);
  if(seen&&seen.source===item.image)return seen;
- const entry={source:item.image,status:'loading',url:null,aspect:null};
+ const entry={source:item.image,status:'loading',url:null,aspect:null,parts:null};
  cache.set(key,entry);
  if(cache.size>MAX_CACHE)cache.delete(cache.keys().next().value);
  const img=new Image();
@@ -50,7 +86,8 @@ function analyze(item,category){
    const sc=sample.getContext('2d',{willReadFrequently:true});
    if(!sc)throw Error('Canvas nicht verfügbar');
    sc.drawImage(img,0,0,sample.width,sample.height);
-   const bounds=alphaBounds(sc.getImageData(0,0,sample.width,sample.height).data,sample.width,sample.height);
+   const alpha=sc.getImageData(0,0,sample.width,sample.height).data;
+   const bounds=alphaBounds(alpha,sample.width,sample.height);
    if(!bounds){entry.status='unusable';return;}
    // The crop is taken from the original full-resolution garment, not
    // from the low-resolution alpha scan.
@@ -65,10 +102,22 @@ function analyze(item,category){
    out.width=Math.max(1,Math.round(cropWidth*outScale));
    out.height=Math.max(1,Math.round(cropHeight*outScale));
    out.getContext('2d').drawImage(img,sourceX,sourceY,cropWidth,cropHeight,0,0,out.width,out.height);
+   const shoeParts=category==='shoes'?findShoeParts(alpha,sample.width,sample.height,bounds):null;
+   const splitCrops=shoeParts?.map(rect=>{
+    const left=Math.max(0,Math.floor(rect.x*scaleX)-2),top=Math.max(0,Math.floor(rect.y*scaleY)-2);
+    const cw=Math.min(width-left,Math.ceil(rect.width*scaleX)+4),ch=Math.min(height-top,Math.ceil(rect.height*scaleY)+4);
+    const scale=Math.min(1,550/Math.max(cw,ch));
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(cw*scale));
+    canvas.height=Math.max(1,Math.round(ch*scale));
+    canvas.getContext('2d').drawImage(img,left,top,cw,ch,0,0,canvas.width,canvas.height);
+    return {url:canvas.toDataURL('image/png'),aspect:canvas.width/canvas.height};
+   })||null;
    const latest=cache.get(key);
    if(latest!==entry||latest.source!==item.image)return;
    entry.url=out.toDataURL('image/png');
    entry.aspect=out.width/out.height;
+   entry.parts=splitCrops;
    entry.status='ready';
    if(chosen[category]===item.id&&view==='styled'&&avatarRenderMode==='silhouette')
     window.renderAvatarV2?.();
@@ -162,6 +211,25 @@ function renderNaturalCutoutV4(item,category,svg){
  if(!entry||entry.status!=='ready'||!entry.url||!shape)return false;
  // Uniform scaling: garment aspect ratio and precise outline remain intact.
  // Unlike the V3 renderer, there is no body/leg/sleeve texture stretching.
+ if(category==='shoes'&&entry.parts?.length===2){
+  const group=document.createElementNS(svgNS,'g');
+  group.setAttribute('data-avatar-slot','shoes');
+  group.setAttribute('data-renderer','paired-shoes-v4');
+  for(const [index,part] of entry.parts.entries()){
+   const maxWidth=index===0?65:70,maxHeight=46;
+   const w=Math.min(maxWidth,maxHeight*part.aspect),h=w/part.aspect;
+   const center=index===0?59:123;
+   const image=document.createElementNS(svgNS,'image');
+   image.setAttribute('x',(center-w/2).toFixed(2));
+   image.setAttribute('y',(447-h).toFixed(2));
+   image.setAttribute('width',w.toFixed(2));image.setAttribute('height',h.toFixed(2));
+   image.setAttribute('href',part.url);
+   image.setAttribute('preserveAspectRatio','xMidYMid meet');
+   image.setAttribute('data-shoe',index?'right':'left');
+   group.append(image);
+  }
+  svg.append(group);return true;
+ }
  const aspect=entry.aspect;
  let width=Math.min(shape.maxWidth,shape.maxHeight*aspect);
  let height=width/aspect;
@@ -183,6 +251,6 @@ function renderNaturalCutoutV4(item,category,svg){
 }
 window.setNaturalAvatarGeometryV4=setNaturalAvatarGeometryV4;
 window.renderNaturalCutoutV4=renderNaturalCutoutV4;
-window.__vithuNaturalV4Test={alphaBounds,cache,shapeAnchors};
+window.__vithuNaturalV4Test={alphaBounds,findShoeParts,cache,shapeAnchors};
 window.renderAvatarV2?.();
 })();
