@@ -9,15 +9,18 @@ const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
 const round=n=>Number(n.toFixed(2));
 const getFigure=()=>document.getElementById('figure');
 
-function calculateRig(topPlacement,build){
+function calculateRig(topPlacement,build,sleeveFit=null){
  const width=Number.isFinite(topPlacement?.width)?topPlacement.width:126;
  const y=Number.isFinite(topPlacement?.y)?topPlacement.y:81;
  const height=Number.isFinite(topPlacement?.height)?topPlacement.height:135;
  const shape={lean:.96,athletic:1,broad:1.055}[build]||1;
  // The sleeve opening, rather than a button-controlled sprite size, determines
  // where the visible forearm begins. These are conservative bounds for T-shirts.
- const sleeveX=clamp((90-width*.445)*shape,24,46);
- const sleeveY=clamp(y+height*.355,114,143);
+ const measured=sleeveFit&&Number.isFinite(sleeveFit.left)&&Number.isFinite(sleeveFit.right)
+  &&Number.isFinite(sleeveFit.y)&&sleeveFit.right>sleeveFit.left;
+ const measuredX=measured?(sleeveFit.left+180-sleeveFit.right)*.5:null;
+ const sleeveX=clamp((measured?measuredX:90-width*.445)*shape,24,46);
+ const sleeveY=clamp(measured?sleeveFit.y:y+height*.355,114,143);
  const elbowX=clamp(sleeveX-3.4,20,43);
  const elbowY=clamp(sleeveY+42,156,182);
  const wristX=clamp(elbowX-1.7,19,41);
@@ -67,22 +70,22 @@ function buildSide(parent,side,g){
   stroke:'var(--persona-shade)','stroke-opacity':'.33','stroke-width':'.8',
   'stroke-linejoin':'round'},sub);
 
- // Palm: three shallow fingertip separations, and a short inward thumb.
+ // Tapered, compact palm with subtle fingertip contours instead of an oversized mitten.
  // Unlike the discarded prototype, no deep finger branches or open claw gap.
- const h=hy-wy;
  const hand=[
-  'M',round(wx-7),round(wy-2),
-  'Q',round(wx),round(wy-4),round(wx+7),round(wy-2),
-  'L',round(wx+8),round(wy+7),
-  'Q',round(wx+11),round(wy+10),round(wx+11),round(wy+13),
-  'Q',round(wx+11),round(wy+16),round(wx+8.5),round(wy+16),
-  'Q',round(wx+6),round(wy+14),round(wx+5),round(wy+11),
+  'M',round(wx-6),round(wy-2),
+  'Q',round(wx),round(wy-3),round(wx+6),round(wy-2),
+  'L',round(wx+6),round(wy+6),
+  'Q',round(wx+9),round(wy+8),round(wx+9),round(wy+11),
+  'Q',round(wx+8),round(wy+13),round(wx+6),round(wy+11),
+  'L',round(wx+5),round(wy+10),
   'L',round(wx+5),round(hy-3),
-  'Q',round(wx+5),round(hy+1),round(wx+2),hy,
-  'Q',round(wx),round(hy+1),round(wx-1),round(hy-2),
-  'Q',round(wx-3),round(hy+2),round(wx-5),round(hy-1),
-  'Q',round(wx-7),round(hy+1),round(wx-9),round(hy-3),
-  'Q',round(wx-11),round(wy+12),round(wx-10),round(wy+7),
+  'Q',round(wx+5),round(hy+1),round(wx+3),round(hy+1),
+  'Q',round(wx+1),round(hy+1),round(wx),round(hy-1),
+  'Q',round(wx-2),round(hy+2),round(wx-3),round(hy-1),
+  'Q',round(wx-5),round(hy+1),round(wx-6),round(hy-2),
+  'Q',round(wx-8),round(hy-4),round(wx-8),round(wy+11),
+  'L',round(wx-7),round(wy+3),
   'Z'
  ].join(' ');
  svgEl('path',{d:hand,fill:'url(#personaSkin)',
@@ -120,7 +123,8 @@ function update(garments={}){
  const outer=garments.outerwear||garments.top;
  const category=garments.outerwear?'outerwear':'top';
  const placement=outer?window.getNaturalCutoutPlacementV4?.(outer,category):null;
- const geometry=calculateRig(placement,avatarProfile?.build);
+ const sleeveFit=outer&&category==='top'?window.getNaturalSleeveFitV4?.(outer,category):null;
+ const geometry=calculateRig(placement,avatarProfile?.build,sleeveFit);
  drawRig(person,geometry);
  return true;
 }
