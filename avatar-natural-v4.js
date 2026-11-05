@@ -81,10 +81,65 @@ function analyze(item,category){
  img.src=item.image;
  return entry;
 }
+
+/* V4-only anatomy pass. Attach natural shoulder-to-forearm contours and
+   separate visible fingers underneath real garment sleeves, not capsule hands.
+   The original V3 arm paths are untouched and restored when switching modes. */
+const portraitIds=['personaHead','personaHairShort','personaHairCurly','personaHairBuzz','personaBeardFull','personaBeardStubble','personaGlasses'];
+function ensureAnatomy(person){
+ const upper=person.querySelector('#personaUpperBody');
+ if(!upper)return null;
+ let group=upper.querySelector('#personaAnatomyV4');
+ if(group)return group;
+ group=document.createElementNS(svgNS,'g');
+ group.setAttribute('id','personaAnatomyV4');
+ const path=(d,fill,extra={})=>{
+  const p=document.createElementNS(svgNS,'path');
+  p.setAttribute('d',d);p.setAttribute('fill',fill);
+  for(const [key,value] of Object.entries(extra))p.setAttribute(key,value);
+  group.append(p);return p;
+ };
+ const leftHand='M39 116 C34 121 30 129 30 139 C30 153 26 165 25 177 L22 197 '+
+ 'C21 204 19 214 22 219 Q24 222 27 219 L29 208 Q30 205 31 210 '+
+ 'L31 222 Q34 226 36 220 L37 209 Q38 206 39 211 L39 218 '+
+ 'Q42 220 44 216 L47 199 Q50 184 49 172 L54 143 L52 124Z';
+ const arm=path(leftHand,'url(#personaSkin)',{'stroke':'var(--persona-shade)','stroke-opacity':'.43','stroke-width':'1.05','stroke-linejoin':'round'});
+ arm.setAttribute('id','v4-arm-left');
+ const right=path(leftHand,'url(#personaSkin)',{'stroke':'var(--persona-shade)','stroke-opacity':'.43','stroke-width':'1.05','stroke-linejoin':'round'});
+ right.setAttribute('id','v4-arm-right');
+ right.setAttribute('transform','translate(180 0) scale(-1 1)');
+ const crease='M25 177 Q31 183 42 177 M28 201 Q34 198 41 200 M29 215 L30 219 M36 216 L35 221';
+ const leftCrease=path(crease,'none',{'stroke':'var(--persona-shade)','stroke-opacity':'.28','stroke-width':'1.1','stroke-linecap':'round'});
+ leftCrease.setAttribute('id','v4-creases-left');
+ const rightCrease=path(crease,'none',{'stroke':'var(--persona-shade)','stroke-opacity':'.28','stroke-width':'1.1','stroke-linecap':'round'});
+ rightCrease.setAttribute('id','v4-creases-right');
+ rightCrease.setAttribute('transform','translate(180 0) scale(-1 1)');
+ upper.insertBefore(group,upper.firstChild);
+ return group;
+}
+function applyNaturalAnatomy(enabled,person){
+ const legacy=person.querySelector('#personaArms'),anatomy=ensureAnatomy(person);
+ if(legacy)legacy.style.display=enabled?'none':'';
+ if(anatomy)anatomy.style.display=enabled?'':'none';
+ const portraitScale='translate(90 50) scale(.94 .94) translate(-90 -50)';
+ for(const id of portraitIds){
+  const element=person.querySelector('#'+id);
+  if(!element)continue;
+  if(!element.dataset.v4OldTransform)
+   element.dataset.v4OldTransform=element.getAttribute('transform')||'__none__';
+  if(enabled)element.setAttribute('transform',portraitScale);
+  else{
+   const original=element.dataset.v4OldTransform;
+   if(original==='__none__')element.removeAttribute('transform');
+   else element.setAttribute('transform',original);
+  }
+ }
+}
 function setNaturalAvatarGeometryV4(enabled){
  const figure=document.getElementById('figure');
  const person=figure?.querySelector('#personaDrawing');
  const lower=person?.querySelector('#personaLowerBody');
+ if(person)applyNaturalAnatomy(enabled,person);
  const garments=document.getElementById('avatarV2Garments');
  if(!figure||!person||!lower||!garments)return;
  // The previous 365 px avatar had disproportionately short legs. In the
