@@ -439,6 +439,7 @@ function syncAvatarMode(){
  svg.style.display=useStyle?'':'none';
 }
 function drawAvatarV2(){
+ window.setNaturalAvatarGeometryV4?.(avatarRenderMode==='silhouette');
  svg.replaceChildren();activeTexturePatterns.clear();
  const active=c=>{const id=chosen[c];return id?items.find(it=>it.id===id&&it.category===c&&it.image):null};
  const bottom=active('bottom'),top=active('top'),shoe=active('shoes'),coat=active('outerwear');
