@@ -135,4 +135,5 @@ function setMode(value){
 window.updateWardrobeBodyRigV5=update;
 window.setAvatarBodyRigMode=setMode;
 window.__vithuBodyV5Test={calculateRig,drawRig};
+window.renderAvatarV2?.(); // First visual render after the new module is available.
 })();
