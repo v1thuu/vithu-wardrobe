@@ -267,6 +267,11 @@
 .review-save-overlay{z-index:5500!important}
 @media(max-width:480px){.batch-review-window{padding:12px}.batch-review-window #smartImportGrid>.smart-card{display:block}.batch-review-window .smart-card>img{width:100%;max-height:41dvh}.batch-review-window .smart-card .details{padding:10px}}
 
+/* The natural garment silhouettes need the real proportions of a longer-legged figure.
+   This class is only applied in V4 and never changes the established V3 fallback. */
+#avatarPanel .figure.avatar-v4-tall{height:450px}
+#avatarPanel .figure.avatar-v4-tall .persona-drawing,
+#avatarPanel .figure.avatar-v4-tall #avatarV2Garments{height:450px;overflow:visible}
 /* Experimental V4 visual comparison: no new fit sliders on the main screen. */
 .avatar-v4-switch{display:flex;gap:6px;padding:4px;background:#22282c;border:1px solid #38444a;border-radius:13px;width:max-content;max-width:100%}
 .avatar-v4-switch button{font-size:12px;padding:9px 13px;border-radius:10px;border:none;min-width:0;background:#303740;color:#d2d8d4;cursor:pointer}
