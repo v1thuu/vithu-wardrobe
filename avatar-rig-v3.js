@@ -193,4 +193,5 @@ window.__wardrobeRigV3=current;
 window.__vithuRigHelpers={alphaContour,computeRig};
 const dropdown=document.getElementById('avatarMorphMode');
 if(dropdown)dropdown.value=avatarMorphMode;
+window.renderAvatarV2?.();
 })();
