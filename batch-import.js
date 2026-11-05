@@ -49,7 +49,7 @@ function buildReview(){
   const controls=document.createElement('div');controls.className='btnrow';
   controls.append(button('Nächstes Foto','',skipCurrent));
   const manual=button('✏ Manuell ausschneiden','secondary',()=>{
-   showManualTools();$('cropbox').style.display='block';
+   setMode('worn');showManualTools();$('cropbox').style.display='block';
    $('smartImportStatus').textContent='Foto manuell zuschneiden und speichern; danach „Nächstes Foto“ wählen.';
   });
   manual.disabled=!sourceImg;
