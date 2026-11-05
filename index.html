@@ -480,13 +480,13 @@ async function batchCancel(){
  if(!batchImport.active)return;
  if((batchImport.phase==='review'||batchImport.review.length||smartSuggestions.length)&&
   !confirm('Import beenden? Noch nicht gespeicherte Kleidungsstücke werden verworfen.'))return;
- ++importSerial;batchClear();smartSuggestions=[];renderSmartSuggestions();
+ ++importSerial;window.vithuWorkerAI?.cancel('Import beendet');batchClear();smartSuggestions=[];renderSmartSuggestions();
  $('smartImportStatus').style.display='block';
  $('smartImportStatus').textContent='Import beendet. Bereits gespeicherte Kleidung bleibt erhalten.';
 }
 async function batchSkipCurrent(){
  if(!batchImport.active||batchImport.phase!=='scan')return;
- if(batchImport.busy){batchImport.skipRequested=true;batchUpdate();return;}
+ if(batchImport.busy){batchImport.skipRequested=true;batchUpdate();window.vithuWorkerAI?.cancel('Foto übersprungen');return;}
  batchImport.discarded+=smartSuggestions.length;smartSuggestions=[];renderSmartSuggestions();
  await batchNextPhoto();
 }
@@ -546,7 +546,7 @@ async function batchNextPhoto(){
  catch(err){console.error('Batch photo failed',err);
   $('smartImportStatus').textContent='⚠ Foto konnte nicht analysiert werden: '+(err?.message||'Fehler');
  }
- finally{clearTimeout(slowTimer);}
+ finally{clearTimeout(slowTimer);window.vithuWorkerAI?.cancel('Foto abgeschlossen');}
  if(!batchImport.active||run!==batchImport.run)return;
  batchImport.busy=false;batchImport.modelStep=2;
  const accepted=smartSuggestions.splice(0);
@@ -570,6 +570,7 @@ async function startBatchImport(files){
  const valid=files.filter(f=>f&&f.type&&f.type.startsWith('image/'));
  if(!valid.length)return toast('Bitte Bilder auswählen');
  if(valid.length>10){alert('Bitte maximal 10 Fotos pro Durchgang auswählen. Die zwei KI-Modelle benötigen auf dem iPhone viel Arbeitsspeicher.');return;}
+ if(!window.vithuWorkerAI?.supported()){alert('Dein Browser unterstützt keine abbrechbare KI-Verarbeitung. Nutze vorerst den Einzelimport oder öffne die App in Safari.');return;}
  ++importSerial; // Invalidate any earlier file analysis before replacing the queue.
  batchClear();batchImport.files=valid;batchImport.active=true;batchImport.phase='scan';
  batchImport.index=-1;batchImport.saved=0;batchImport.discarded=0;batchImport.errors=[];
@@ -931,10 +932,28 @@ async function smartImportBeta(engine='legacy',options={}){
  const btn=$('smartImportBtn');smartImportBusy=true;if(btn)btn.disabled=true;
  if(!quiet){smartSuggestions=[];renderSmartSuggestions();status.textContent='KI wird geladen …'}
  try{
-  const parser=engine==='fashn'?await getFashionParser():await getGarmentParser();if(jobSerial!==importSerial)return null;if(!quiet)status.textContent='Foto wird analysiert …';const analysisStart=performance.now();
+  const inBatch=batchImport.active&&batchImport.phase==='scan';
+  // In a batch the large models MUST run in a dedicated Worker, not on the UI thread.
+  // The prior main-thread WASM execution could freeze at Foto 1 / B2 indefinitely.
+  const parser=inBatch?null:(engine==='fashn'?await getFashionParser():await getGarmentParser());
+  if(jobSerial!==importSerial)return null;
+  if(!quiet)status.textContent='Foto wird analysiert …';
+  const analysisStart=performance.now();
   const src=$('cropcanvas'),w=src.width,h=src.height;
   const srcPixels=src.getContext('2d',{willReadFrequently:true}).getImageData(0,0,w,h).data;
-  const results=await parser(src.toDataURL('image/jpeg',.85));const analysisMs=performance.now()-analysisStart;
+  const jpeg=src.toDataURL('image/jpeg',.83);
+  const results=inBatch
+   ?await window.vithuWorkerAI.analyze(engine,jpeg,p=>{
+      if(jobSerial!==importSerial)return;
+      if(p.type==='status'){
+       const labels={library:'KI-Bibliothek laden',model:'KI-Modell laden',inference:'Kleidung freistellen',release:'Speicher freigeben'};
+       status.textContent='Foto '+(batchImport.index+1)+' · '+(engine==='legacy'?'B2':'B4')+' · '+(labels[p.stage]||'Analyse');
+      }else if(p.type==='progress'&&Number.isFinite(p.percent)){
+       status.textContent='Foto '+(batchImport.index+1)+' · '+(engine==='legacy'?'B2':'B4')+' · Modell '+p.percent+'%';
+      }
+     })
+   :await parser(jpeg);
+  const analysisMs=performance.now()-analysisStart;
   if(jobSerial!==importSerial)return null;
   const grouped=new Map();
   const bodyMask=new Uint8Array(w*h);
@@ -1065,11 +1084,11 @@ async function runHybridImport(serial,stats){
  if(inBatch){batchImport.modelStep=0;batchUpdate();}
  status.textContent=inBatch?'Foto '+(batchImport.index+1)+' · SegFormer B2':'Kleidung erkennen · 1/2';
  const first=await smartImportBeta('legacy',{silent:true});
- if(serial!==importSerial)return;
+ if(serial!==importSerial||(inBatch&&batchImport.skipRequested))return;
  if(inBatch){batchImport.modelStep=1;batchUpdate();}
  status.textContent=inBatch?'Foto '+(batchImport.index+1)+' · FASHN B4':'Freistellung optimieren · 2/2';
  const second=await smartImportBeta('fashn',{silent:true});
- if(serial!==importSerial)return;
+ if(serial!==importSerial||(inBatch&&batchImport.skipRequested))return;
  if(!first&&!second){
   status.textContent='⚠ KI nicht verfügbar. Dieses Foto überspringen oder unter „Erweiterte Optionen“ manuell korrigieren.';
   if(inBatch){$('closetAdvancedOptions').open=true;$('manualTools').open=true;$('cropbox').style.display='block';}
@@ -1614,4 +1633,4 @@ async function aiCutout(){
   finally{btn.disabled=false;btn.textContent='🤖 KI freistellen (kostenlos)';}
 }
 init();switchWardrobeTab('wardrobe',{scroll:false});
-</script><script src="./photo-tryon.js"></script><script src="./avatar-profile.js"></script><script src="./avatar-v2.js"></script><script src="./avatar-rig-v3.js"></script></body></html>
+</script><script src="./photo-tryon.js"></script><script src="./avatar-profile.js"></script><script src="./avatar-v2.js"></script><script src="./avatar-rig-v3.js"></script><script src="./garment-ai-worker-client.js"></script></body></html>
