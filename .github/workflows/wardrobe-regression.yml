@@ -5,6 +5,7 @@ on:
       - feat/avatar-v5-joint-rig-safe-prototype-20261105
       - fix/v5-sleeve-contours-and-hand-proportions-20261105
       - feat/v5-cutout-fit-measurements-20261105
+      - feat/v5-parametric-arm-rig-20261105
   pull_request:
     paths:
       - 'index.html'
