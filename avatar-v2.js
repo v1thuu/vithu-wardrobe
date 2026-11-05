@@ -455,6 +455,10 @@ function drawAvatarV2(){
  draw(top,'top',()=>topTemplate(top,'top'));
  draw(coat,'outerwear',()=>topTemplate(coat,'outerwear'));
  draw(shoe,'shoes',()=>shoesTemplate(shoe));
+ // Body rig is behind the real garment layers, opt-in, and reversible.
+ window.updateWardrobeBodyRigV5?.({top,outerwear:coat});
+ const bodyRigSelect=document.getElementById('avatarBodyRigMode');
+ if(bodyRigSelect&&bodyRigSelect.value!==avatarBodyRigMode)bodyRigSelect.value=avatarBodyRigMode;
  syncAvatarMode();
 }
 function renderAvatarV2(){
