@@ -119,7 +119,7 @@ function garmentColor(item,cat){
    No user-photo uploads, no third-party API, no mutations of the original PNG.
    Each body part uses an independent crop and an independent SVG clip silhouette. */
 const regionDefs={
- top:{body:[.19,.15,.62,.82],leftSleeve:[.01,.17,.33,.39],rightSleeve:[.66,.17,.33,.39],logo:[.58,.21,.31,.26]},
+ top:{body:[.16,.12,.68,.85],leftSleeve:[.01,.17,.33,.39],rightSleeve:[.66,.17,.33,.39]},
  outerwear:{body:[.17,.12,.66,.87],leftSleeve:[0,.20,.30,.62],rightSleeve:[.70,.20,.30,.62]},
  bottom:{waist:[.04,.015,.92,.28],leftLeg:[.02,.25,.48,.74],rightLeg:[.50,.25,.48,.74]},
  shoes:{leftShoe:[.01,.03,.48,.94],rightShoe:[.51,.03,.48,.94]}
@@ -187,8 +187,8 @@ function texturePattern(item,cat){
  image.onerror=()=>{const current=textureCache.get(key);if(current&&current.source===source)current.pending=false;};
  image.src=source;
 }
-function panel(parent,cat,part,d,base,rect,opacity=.86){
- const solid=base==='none'?null:path(parent,d,base);
+function panel(parent,cat,part,d,base,rect,opacity=.86,stroke='#1a2027'){
+ const solid=base==='none'?null:path(parent,d,base,stroke);
  if(opacity<=0)return solid;
  const zones=activeTexturePatterns.get(cat);
  const uri=zones&&zones[part];
@@ -249,8 +249,7 @@ function topTemplate(item,cat){
  panel(group,cat,'leftSleeve',left,tint(base,.91),[18,82,48,60],opacity);
  panel(group,cat,'rightSleeve',right,tint(base,.92),[114,82,49,60],opacity);
  panel(group,cat,'body',body,fabric,[43,82,94,bottomY-79],opacity);
- // Real right-chest print region. Never synthesize a logo.
- panel(group,cat,'logo','M99 103 Q107 102 118 104 L118 123 Q109 124 99 122Z','none',[99,103,20,21],opacity);
+ // Use the actual chest pixels only once. A second logo crop created duplicate prints.
  accent(group,'M75 85 Q90 104 105 85',tint(base,.6),.64,2.5);
  accent(group,'M50 '+(bottomY-3)+' Q90 '+(bottomY+4)+' 130 '+(bottomY-3),tint(base,1.6),.44,1.6);
  accent(group,'M39 128 L48 124 M132 124 L141 128',tint(base,1.55),.36);
@@ -265,14 +264,26 @@ function pantsTemplate(item){
  const leftStart=wide?46:slim?55:51,leftEnd=wide?92:slim?86:89;
  const rightStart=wide?90:slim?96:92,rightEnd=wide?135:slim?123:129;
  const length=fitSettings(item).length,cuffY=length==='short'?325:length==='long'?341:335;
- const leftD='M50 221 L89 220 Q93 242 89 268 L'+leftEnd+' '+cuffY+' Q'+(leftStart+leftEnd)/2+' '+(cuffY+4)+' '+leftStart+' '+cuffY+' L'+(leftStart-4)+' 278 Q48 243 50 221Z';
- const rightD='M92 220 L129 221 Q132 247 '+(rightEnd+1)+' 285 L'+rightEnd+' '+cuffY+' Q'+(rightStart+rightEnd)/2+' '+(cuffY+4)+' '+rightStart+' '+cuffY+' L93 264 Q89 240 92 220Z';
- panel(group,cat,'leftLeg',leftD,fabric,[leftStart-6,222,leftEnd-leftStart+14,cuffY-219],opacity);
- panel(group,cat,'rightLeg',rightD,fabric,[rightStart-7,222,rightEnd-rightStart+15,cuffY-219],opacity);
- panel(group,cat,'waist','M51 206 Q90 212 129 206 L130 233 Q111 230 92 232 L90 247 L87 232 Q68 232 50 233Z',fabric,[49,206,83,43],opacity);
- accent(group,'M52 213 Q90 219 128 213 M89 216 L89 245 M58 226 Q69 231 81 225 M99 225 Q110 231 121 226',tint(base,.63),.58,1.55);
- accent(group,'M'+leftStart+' '+(cuffY-2)+' L'+leftEnd+' '+(cuffY-2)+' M'+rightStart+' '+(cuffY-2)+' L'+rightEnd+' '+(cuffY-2),tint(base,1.55),.5,1.9);
- accent(group,'M62 249 Q69 281 '+(leftStart+6)+' '+(cuffY-11)+' M115 248 Q110 286 '+(rightEnd-6)+' '+(cuffY-11),tint(base,.58),.26,1.1);
+ const leftD='M50 219 L89 219 Q93 242 89 268 L'+leftEnd+' '+cuffY+' Q'+(leftStart+leftEnd)/2+' '+(cuffY+4)+' '+leftStart+' '+cuffY+' L'+(leftStart-4)+' 278 Q48 243 50 219Z';
+ const rightD='M92 219 L129 219 Q132 247 '+(rightEnd+1)+' 285 L'+rightEnd+' '+cuffY+' Q'+(rightStart+rightEnd)/2+' '+(cuffY+4)+' '+rightStart+' '+cuffY+' L93 264 Q89 240 92 219Z';
+ // Draw fabric at the waist first. Legs gradually blend into it rather than
+ // creating two horizontal rectangles with full black borders at hip level.
+ panel(group,cat,'waist','M51 206 Q90 212 129 206 L131 238 Q113 232 93 235 L90 250 L87 235 Q67 232 49 238Z',fabric,[49,205,83,46],opacity,'none');
+ const defs=svg.querySelector('defs')||element('defs');
+ const fade=element('linearGradient',{id:'vnext-leg-join',gradientUnits:'userSpaceOnUse',x1:0,y1:218,x2:0,y2:236},defs);
+ element('stop',{offset:'0%','stop-color':'black'},fade);
+ element('stop',{offset:'100%','stop-color':'white'},fade);
+ const mask=element('mask',{id:'vnext-leg-mask',maskUnits:'userSpaceOnUse',x:0,y:0,width:180,height:365},defs);
+ element('rect',{x:0,y:0,width:180,height:365,fill:'url(#vnext-leg-join)'},mask);
+ const legs=element('g',{mask:'url(#vnext-leg-mask)'},group);
+ panel(legs,cat,'leftLeg',leftD,fabric,[leftStart-6,219,leftEnd-leftStart+14,cuffY-216],opacity,'none');
+ panel(legs,cat,'rightLeg',rightD,fabric,[rightStart-7,219,rightEnd-rightStart+15,cuffY-216],opacity,'none');
+ // Exterior contours only; do not outline each overlapping garment panel.
+ accent(group,'M51 208 Q90 213 129 208',tint(base,.62),.49,1.2);
+ accent(group,'M51 219 Q47 260 '+(leftStart-4)+' 285 L'+leftStart+' '+cuffY+' Q'+(leftStart+leftEnd)/2+' '+(cuffY+3)+' '+leftEnd+' '+cuffY+' L89 268',tint(base,.62),.70,1.2);
+ accent(group,'M92 268 L'+rightStart+' '+cuffY+' Q'+(rightStart+rightEnd)/2+' '+(cuffY+3)+' '+rightEnd+' '+cuffY+' Q132 254 129 219',tint(base,.62),.70,1.2);
+ accent(group,'M89 224 L89 248 M58 223 Q70 226 81 222 M99 222 Q112 226 122 223',tint(base,.54),.26,1.1);
+ accent(group,'M'+leftStart+' '+(cuffY-2)+' L'+leftEnd+' '+(cuffY-2)+' M'+rightStart+' '+(cuffY-2)+' L'+rightEnd+' '+(cuffY-2),tint(base,1.48),.39,1.4);
 }
 function shoesTemplate(item){
  const cat='shoes',base=garmentColor(item,cat),fabric=gradient(cat,base),sub=determineSubtype(item,cat),opacity=fabricOpacity(item,cat);
@@ -289,7 +300,13 @@ function shoesTemplate(item){
  panel(group,cat,'rightShoe',right,fabric,[98,324,60,36],opacity);
  accent(group,'M34 355 L99 355 M100 355 L154 355',tint(base,.55),.7,2.1);
  accent(group,'M60 338 L82 338 M59 342 L84 342 M105 338 L124 338 M105 342 L128 342',tint(base,.6),.55,1.35);
- accent(group,'M37 351 L96 351 M101 351 L150 351',tint(base,1.55),.50,1.2);
+ // Distinct rubber outsole, sidewall and toe transitions reinforce the two
+ // shoes as objects rather than flat white SVG silhouettes.
+ path(group,'M34 351 Q60 354 98 351 L99 357 Q64 360 34 358Z',tint(base,.79),'none');
+ path(group,'M101 352 Q126 355 154 351 L155 357 Q126 360 101 358Z',tint(base,.78),'none');
+ accent(group,'M45 348 Q63 343 88 349 M108 348 Q129 344 147 351',tint(base,.62),.39,1.3);
+ accent(group,'M61 336 Q68 339 82 336 M108 337 Q117 340 125 337',tint(base,.61),.53,1.4);
+ accent(group,'M38 355 Q68 357 96 355 M103 355 Q129 357 153 355',tint(base,1.57),.60,1.4);
 }
 function refreshGarmentSubtype(){
  const categoryInput=document.getElementById('invEditCategory');
