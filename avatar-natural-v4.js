@@ -104,8 +104,11 @@ function analyze(item,category){
    entry.url=out.toDataURL('image/png');
    entry.aspect=out.width/out.height;
    if(category==='top'){
-    const cropPixels=out.getContext('2d',{willReadFrequently:true}).getImageData(0,0,out.width,out.height).data;
-    entry.sleeves=detectSleeveContour(cropPixels,out.width,out.height);
+    // This optional measurement must NEVER discard a valid clothing cutout.
+    try{
+     const cropPixels=out.getContext('2d',{willReadFrequently:true})?.getImageData(0,0,out.width,out.height)?.data;
+     entry.sleeves=cropPixels?detectSleeveContour(cropPixels,out.width,out.height):null;
+    }catch{entry.sleeves=null;}
    }
    entry.status='ready';
    if(chosen[category]===item.id&&view==='styled'&&avatarRenderMode==='silhouette')
