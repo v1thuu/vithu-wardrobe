@@ -214,7 +214,10 @@ function topTemplate(item,cat){
  const sub=determineSubtype(item,cat),base=garmentColor(item,cat),fabric=gradient(cat,base),opacity=fabricOpacity(item,cat);
  texturePattern(item,cat);
  const group=element('g',{'data-avatar-slot':cat});
- const build=avatarProfile&&avatarProfile.build||'athletic',scale={lean:.91,athletic:1,broad:1.09}[build]||1;
+ const build=avatarProfile&&avatarProfile.build||'athletic';
+ const adaptive=window.__wardrobeRigV3?.active===true;
+ const factor=adaptive?{lean:.88,athletic:1,broad:1.12}[build]:{lean:.91,athletic:1,broad:1.09}[build];
+ const scale=(factor||1)*(adaptive?window.__wardrobeRigV3.topScale:1);
  group.setAttribute('transform','translate(90 0) scale('+scale+' 1) translate(-90 0)');
  if(cat==='outerwear'||sub==='hoodie'){
   const hoodie=sub==='hoodie';
@@ -258,7 +261,10 @@ function pantsTemplate(item){
  const cat='bottom',sub=determineSubtype(item,cat),base=garmentColor(item,cat),fabric=gradient(cat,base),opacity=fabricOpacity(item,cat);
  texturePattern(item,cat);
  const group=element('g',{'data-avatar-slot':cat});
- const build=avatarProfile&&avatarProfile.build||'athletic',scale={lean:.93,athletic:1,broad:1.065}[build]||1;
+ const build=avatarProfile&&avatarProfile.build||'athletic';
+ const adaptive=window.__wardrobeRigV3?.active===true;
+ const factor=adaptive?{lean:.94,athletic:1,broad:1.085}[build]:{lean:.93,athletic:1,broad:1.065}[build];
+ const scale=(factor||1)*(adaptive?window.__wardrobeRigV3.bottomScale:1);
  group.setAttribute('transform','translate(90 0) scale('+scale+' 1) translate(-90 0)');
  const slim=sub==='slim',wide=sub==='wide';
  const leftStart=wide?46:slim?55:51,leftEnd=wide?92:slim?86:89;
@@ -289,6 +295,12 @@ function shoesTemplate(item){
  const cat='shoes',base=garmentColor(item,cat),fabric=gradient(cat,base),sub=determineSubtype(item,cat),opacity=fabricOpacity(item,cat);
  texturePattern(item,cat);
  const group=element('g',{'data-avatar-slot':cat});
+ const rig=window.__wardrobeRigV3;
+ if(rig?.active){
+  const build=avatarProfile?.build||'athletic';
+  const factor={lean:.94,athletic:1,broad:1.085}[build]||1;
+  group.setAttribute('transform','translate(90 0) scale('+(factor*rig.shoeScale)+' 1) translate(-90 0)');
+ }
  const boot=sub==='boot',chunky=sub==='chunky';
  const left=boot?'M57 316 L84 316 L90 344 Q96 357 82 359 L36 359 Q29 353 40 345 L55 336Z':
  chunky?'M60 327 Q73 330 85 326 L92 342 Q107 347 101 355 Q98 361 86 360 L34 360 Q25 355 35 347 L56 337Z':
@@ -426,6 +438,7 @@ function drawAvatarV2(){
  svg.replaceChildren();activeTexturePatterns.clear();
  const active=c=>{const id=chosen[c];return id?items.find(it=>it.id===id&&it.category===c&&it.image):null};
  const bottom=active('bottom'),top=active('top'),shoe=active('shoes'),coat=active('outerwear');
+ window.renderGarmentDrivenRig?.({top,bottom,shoes:shoe,outerwear:coat});
  if(bottom)pantsTemplate(bottom);
  if(top)topTemplate(top,'top');
  if(coat)topTemplate(coat,'outerwear');
