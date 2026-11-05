@@ -14,24 +14,26 @@ function calculateRig(topPlacement,build,sleeveFit=null){
  const y=Number.isFinite(topPlacement?.y)?topPlacement.y:81;
  const height=Number.isFinite(topPlacement?.height)?topPlacement.height:135;
  const shape={lean:.96,athletic:1,broad:1.055}[build]||1;
- // The sleeve opening, rather than a button-controlled sprite size, determines
- // where the visible forearm begins. These are conservative bounds for T-shirts.
+ // Garment alpha is only allowed to position the sleeve opening. It must
+ // never dictate the person's skeleton, arm thickness or hand anatomy.
  const measured=sleeveFit&&Number.isFinite(sleeveFit.left)&&Number.isFinite(sleeveFit.right)
   &&Number.isFinite(sleeveFit.y)&&sleeveFit.right>sleeveFit.left;
  const measuredX=measured?(sleeveFit.left+180-sleeveFit.right)*.5:null;
  const sleeveX=clamp((measured?measuredX:90-width*.445)*shape,24,46);
  const sleeveY=clamp(measured?sleeveFit.y:y+height*.355,114,143);
- const elbowX=clamp(sleeveX-3.4,20,43);
- const elbowY=clamp(sleeveY+42,156,182);
- const wristX=clamp(elbowX-1.7,19,41);
- const wristY=clamp(elbowY+38,196,216);
- const handY=clamp(wristY+19,217,238);
+ // Real joints are not collinear: elbow naturally rests slightly outside
+ // the sleeve and the relaxed wrist returns inward toward the hip.
+ // Keep vertical landmarks broadly stable when switching fitted/loose tees.
+ const elbowX=clamp(sleeveX-8.4,16,42);
+ const elbowY=clamp(168+(sleeveY-124)*.32,160,177);
+ const wristX=clamp(elbowX+6.1,22,48);
+ const wristY=clamp(208+(sleeveY-124)*.22,201,216);
+ const handY=clamp(wristY+19,220,238);
  return {sleeveX:round(sleeveX),sleeveY:round(sleeveY),
   elbowX:round(elbowX),elbowY:round(elbowY),
   wristX:round(wristX),wristY:round(wristY),handY:round(handY),
   garmentWidth:round(width)};
 }
-
 function svgEl(type,attrs,parent){
  const node=document.createElementNS(NS,type);
  for(const [k,v] of Object.entries(attrs))node.setAttribute(k,String(v));
@@ -54,52 +56,56 @@ function buildSide(parent,side,g){
  const sub=svgEl('g',{'data-arm-side':side},parent);
  if(side==='right')sub.setAttribute('transform','translate(180 0) scale(-1 1)');
  const {sleeveX:sx,sleeveY:sy,elbowX:ex,elbowY:ey,wristX:wx,wristY:wy,handY:hy}=g;
-
- // Upper arm and forearm share a continuous outline at the elbow.
- // The taper and slight elbow bend avoid the previous sausage-shaped limbs.
+ // A single continuous tapered skin silhouette beneath the original shirt.
+ // The outer contour swells near the upper arm, narrows at the elbow and
+ // tapers towards the wrist. No horizontal elbow/wrist cuff or segmented pipe.
  const arm=[
-  'M',round(sx-5),sy,
-  'C',round(sx-10),round(sy+14),round(ex-7),round(ey-14),round(ex-8),ey,
-  'C',round(ex-9),round(ey+12),round(wx-8),round(wy-12),round(wx-7),wy,
-  'Q',round(wx),round(wy+3),round(wx+7),round(wy-1),
-  'C',round(wx+7),round(wy-15),round(ex+8),round(ey+12),round(ex+7),ey,
-  'Q',round(ex+10),round(ey-17),round(sx+8),round(sy+8),
-  'L',round(sx+6),sy,'Z'
+  'M',round(sx-6.8),round(sy-1.5),
+  'C',round(sx-10.5),round(sy+12),round(ex-8.2),round(ey-16),round(ex-7.3),ey,
+  'C',round(ex-7.8),round(ey+11),round(wx-5.4),round(wy-14),round(wx-4.8),wy,
+  'Q',wx,round(wy+2.2),round(wx+4.5),round(wy-.5),
+  'C',round(wx+5),round(wy-13),round(ex+6.8),round(ey+12),round(ex+6),round(ey-1),
+  'C',round(ex+6.4),round(ey-16),round(sx+6.8),round(sy+7),round(sx+6),round(sy-1.5),
+  'Q',sx,round(sy-3),round(sx-6.8),round(sy-1.5),'Z'
  ].join(' ');
  svgEl('path',{d:arm,fill:'url(#personaSkin)',
-  stroke:'var(--persona-shade)','stroke-opacity':'.33','stroke-width':'.8',
-  'stroke-linejoin':'round'},sub);
+  stroke:'var(--persona-shade)','stroke-opacity':'.21','stroke-width':'.72',
+  'stroke-linejoin':'round','stroke-linecap':'round'},sub);
 
- // Tapered, compact palm with subtle fingertip contours instead of an oversized mitten.
- // Unlike the discarded prototype, no deep finger branches or open claw gap.
+ // Relaxed hand: narrow palm, visible thumb on the body's inner side and
+ // three shallow fingertip contours. Scale stays proportional to the wrist.
  const hand=[
-  'M',round(wx-6),round(wy-2),
-  'Q',round(wx),round(wy-3),round(wx+6),round(wy-2),
-  'L',round(wx+6),round(wy+6),
-  'Q',round(wx+9),round(wy+8),round(wx+9),round(wy+11),
-  'Q',round(wx+8),round(wy+13),round(wx+6),round(wy+11),
-  'L',round(wx+5),round(wy+10),
-  'L',round(wx+5),round(hy-3),
-  'Q',round(wx+5),round(hy+1),round(wx+3),round(hy+1),
-  'Q',round(wx+1),round(hy+1),round(wx),round(hy-1),
-  'Q',round(wx-2),round(hy+2),round(wx-3),round(hy-1),
-  'Q',round(wx-5),round(hy+1),round(wx-6),round(hy-2),
-  'Q',round(wx-8),round(hy-4),round(wx-8),round(wy+11),
-  'L',round(wx-7),round(wy+3),
-  'Z'
+  'M',round(wx-4.6),round(wy-1),
+  'C',round(wx-4.8),round(wy+3),round(wx-4.5),round(wy+7),round(wx-4.3),round(wy+10),
+  'L',round(wx-4),round(hy-3.8),
+  'Q',round(wx-3.8),round(hy-.3),round(wx-2.6),round(hy-.1),
+  'Q',round(wx-1.4),round(hy+.1),round(wx-1.2),round(hy-2.3),
+  'Q',round(wx-.9),round(hy+.9),round(wx+.7),round(hy+.9),
+  'Q',round(wx+2.3),round(hy+.7),round(wx+2.2),round(hy-2),
+  'Q',round(wx+2.6),round(hy+.4),round(wx+3.8),round(hy-.2),
+  'Q',round(wx+5.3),round(hy-1),round(wx+4.9),round(hy-3.5),
+  'L',round(wx+4.2),round(wy+10.5),
+  'Q',round(wx+5.2),round(wy+12.2),round(wx+7),round(wy+10.5),
+  'Q',round(wx+7.5),round(wy+9),round(wx+6.5),round(wy+7.2),
+  'Q',round(wx+4.5),round(wy+5),round(wx+4.2),round(wy+2.5),
+  'L',round(wx+4.3),round(wy-1),
+  'Q',wx,round(wy-3),round(wx-4.6),round(wy-1),'Z'
  ].join(' ');
  svgEl('path',{d:hand,fill:'url(#personaSkin)',
-  stroke:'var(--persona-shade)','stroke-opacity':'.36','stroke-width':'.8',
-  'stroke-linejoin':'round'},sub);
- // Small palm crease, not dark drawn-on fingers.
- svgEl('path',{d:'M '+round(wx-6)+' '+round(wy+5)+' Q '+round(wx)+' '+round(wy+3)+
-   ' '+round(wx+4)+' '+round(wy+6),
-  fill:'none',stroke:'var(--persona-shade)','stroke-opacity':'.18',
-  'stroke-width':'.8','stroke-linecap':'round'},sub);
- svgEl('path',{d:'M '+round(ex-7)+' '+round(ey-1)+' Q '+round(ex)+
-  ' '+round(ey+3)+' '+round(ex+5)+' '+round(ey-1),
-  fill:'none',stroke:'var(--persona-shade)','stroke-opacity':'.14',
-  'stroke-width':'.75'},sub);
+  stroke:'var(--persona-shade)','stroke-opacity':'.24','stroke-width':'.6',
+  'stroke-linejoin':'round','stroke-linecap':'round'},sub);
+ // Very faint finger lines; avoid wrist bands and drawn-on cartoon knuckles.
+ svgEl('path',{d:[
+  'M',round(wx-.9),round(hy-5),'L',round(wx-.9),round(hy-2.4),
+  'M',round(wx+2.1),round(hy-5.1),'L',round(wx+2.1),round(hy-2.1)
+ ].join(' '),fill:'none',stroke:'var(--persona-shade)',
+  'stroke-opacity':'.13','stroke-width':'.55','stroke-linecap':'round'},sub);
+ // Short elbow shadow (not a horizontal seam across the limb).
+ svgEl('path',{d:[
+  'M',round(ex+1),round(ey+3),
+  'Q',round(ex+3.5),round(ey+1.3),round(ex+4),round(ey-1)
+ ].join(' '),fill:'none',stroke:'var(--persona-shade)',
+  'stroke-opacity':'.11','stroke-width':'.7','stroke-linecap':'round'},sub);
  return sub;
 }
 function drawRig(person,geometry){
