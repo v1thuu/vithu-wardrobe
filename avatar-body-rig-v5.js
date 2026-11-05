@@ -6,7 +6,25 @@
 'use strict';
 const NS='http://www.w3.org/2000/svg';
 const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
-const round=n=>Number(n.toFixed(2));
+
+// Fixed anatomical skeleton in the 180px avatar coordinate system.
+// Clothing may alter sleeveX/sleeveY only; it never changes these joints.
+const RIG_LANDMARKS=Object.freeze({
+ shoulder:Object.freeze({x:40,y:108}),
+ upperArm:Object.freeze({x:32,y:145}),
+ elbow:Object.freeze({x:25,y:169}),
+ forearm:Object.freeze({x:28,y:190}),
+ wrist:Object.freeze({x:32,y:211}),
+ handLength:19
+});
+const RIG_RADII=Object.freeze({
+ sleeve:7.1,upperArm:7.6,elbow:6.3,forearm:5.2,wrist:4.3
+});
+const BUILD_RADIUS_SCALE=Object.freeze({lean:.90,athletic:1,broad:1.13});
+const BODY_CENTER_X=90;
+const BODY_VIEW_WIDTH=180;
+const round=(n)=>Number(n.toFixed(2));
+
 const getFigure=()=>document.getElementById('figure');
 
 
@@ -33,25 +51,90 @@ function calculateRig(topPlacement,build,sleeveFit=null){
  const y=Number.isFinite(topPlacement?.y)?topPlacement.y:81;
  const height=Number.isFinite(topPlacement?.height)?topPlacement.height:135;
  const shape={lean:.96,athletic:1,broad:1.055}[build]||1;
- // Garment alpha is only allowed to position the sleeve opening. It must
- // never dictate the person's skeleton, arm thickness or hand anatomy.
  const measured=sleeveFit&&Number.isFinite(sleeveFit.left)&&Number.isFinite(sleeveFit.right)
-  &&Number.isFinite(sleeveFit.y)&&sleeveFit.right>sleeveFit.left;
- const measuredX=measured?(sleeveFit.left+180-sleeveFit.right)*.5:null;
- const sleeveX=clamp((measured?measuredX:90-width*.445)*shape,24,46);
+   &&Number.isFinite(sleeveFit.y)&&sleeveFit.right>sleeveFit.left;
+ const measuredX=measured?(sleeveFit.left+BODY_VIEW_WIDTH-sleeveFit.right)*.5:null;
+ // A shirt affects where bare skin starts, not the arm's actual skeleton.
+ const sleeveX=clamp((measured?measuredX:BODY_CENTER_X-width*.445)*shape,24,46);
  const sleeveY=clamp(measured?sleeveFit.y:y+height*.355,114,143);
- // Real joints are not collinear: elbow naturally rests slightly outside
- // the sleeve and the relaxed wrist returns inward toward the hip.
- // Keep vertical landmarks broadly stable when switching fitted/loose tees.
- const elbowX=clamp(sleeveX-8.4,16,42);
- const elbowY=clamp(168+(sleeveY-124)*.32,160,177);
- const wristX=clamp(elbowX+6.1,22,48);
- const wristY=clamp(208+(sleeveY-124)*.22,201,216);
- const handY=clamp(wristY+19,220,238);
- return {sleeveX:round(sleeveX),sleeveY:round(sleeveY),
-  elbowX:round(elbowX),elbowY:round(elbowY),
-  wristX:round(wristX),wristY:round(wristY),handY:round(handY),
-  garmentWidth:round(width)};
+ const scale=BUILD_RADIUS_SCALE[build]||1;
+ const radii=Object.fromEntries(Object.entries(RIG_RADII).map(([key,r])=>[
+  key,round(clamp(r*scale,3.75,9.2))
+ ]));
+ const joints={
+  shoulder:{...RIG_LANDMARKS.shoulder},
+  upperArm:{...RIG_LANDMARKS.upperArm},
+  elbow:{...RIG_LANDMARKS.elbow},
+  forearm:{...RIG_LANDMARKS.forearm},
+  wrist:{...RIG_LANDMARKS.wrist}
+ };
+ return {
+  sleeveX:round(sleeveX),sleeveY:round(sleeveY),
+  shoulderX:joints.shoulder.x,shoulderY:joints.shoulder.y,
+  upperArmX:joints.upperArm.x,upperArmY:joints.upperArm.y,
+  elbowX:joints.elbow.x,elbowY:joints.elbow.y,
+  forearmX:joints.forearm.x,forearmY:joints.forearm.y,
+  wristX:joints.wrist.x,wristY:joints.wrist.y,
+  handY:joints.wrist.y+RIG_LANDMARKS.handLength,
+  joints,radii,garmentWidth:round(width)
+ };
+}
+
+function tangentNormal(points,index){
+ const from=points[Math.max(0,index-1)],to=points[Math.min(points.length-1,index+1)];
+ const dx=to.x-from.x,dy=to.y-from.y;
+ const len=Math.hypot(dx,dy)||1;
+ return {x:-dy/len,y:dx/len};
+}
+function offsetArmSide(points,sign){
+ return points.map((p,i)=>{
+  const n=tangentNormal(points,i);
+  return {x:p.x+n.x*p.radius*sign,y:p.y+n.y*p.radius*sign};
+ });
+}
+function catmullRomSegmentPaths(points){
+ const segments=[];
+ for(let i=0;i<points.length-1;i++){
+  const p0=points[Math.max(0,i-1)],p1=points[i],p2=points[i+1],
+   p3=points[Math.min(points.length-1,i+2)];
+  const c1={x:p1.x+(p2.x-p0.x)/6,y:p1.y+(p2.y-p0.y)/6};
+  const c2={x:p2.x-(p3.x-p1.x)/6,y:p2.y-(p3.y-p1.y)/6};
+  segments.push(['C',round(c1.x),round(c1.y),round(c2.x),round(c2.y),
+    round(p2.x),round(p2.y)].join(' '));
+ }
+ return segments.join(' ');
+}
+function createArmOutlineV5(g){
+ const points=[
+  {x:g.sleeveX,y:g.sleeveY,radius:g.radii.sleeve},
+  {x:g.upperArmX,y:g.upperArmY,radius:g.radii.upperArm},
+  {x:g.elbowX,y:g.elbowY,radius:g.radii.elbow},
+  {x:g.forearmX,y:g.forearmY,radius:g.radii.forearm},
+  {x:g.wristX,y:g.wristY,radius:g.radii.wrist}
+ ];
+ const exterior=offsetArmSide(points,1);
+ const interior=offsetArmSide(points,-1).reverse();
+ return ['M',round(exterior[0].x),round(exterior[0].y),
+  catmullRomSegmentPaths(exterior),
+  'Q',round(g.wristX),round(g.wristY+1),round(interior[0].x),round(interior[0].y),
+  catmullRomSegmentPaths(interior),
+  'Q',round(g.sleeveX),round(g.sleeveY-2),round(exterior[0].x),round(exterior[0].y),
+  'Z'].join(' ');
+}
+function createHandOutlineV5(g){
+ const wx=g.wristX,wy=g.wristY,hy=g.handY;
+ const r=clamp(g.radii.wrist*.97,3.6,5.3);
+ // Continuous relaxed fist silhouette: no separate fingertip zigzags.
+ // On the left arm the thumb faces inward (positive x); right is mirrored.
+ return ['M',round(wx-r),round(wy-1),
+  'C',round(wx-r-1),round(wy+4),round(wx-r-.7),round(hy-4),round(wx-r+.3),round(hy-1),
+  'Q',round(wx),round(hy+1),round(wx+r-.4),round(hy-1),
+  'C',round(wx+r+.4),round(hy-3),round(wx+r-.5),round(wy+11),round(wx+r),round(wy+9),
+  'C',round(wx+r+2.5),round(wy+12),round(wx+r+4),round(wy+10),
+  round(wx+r+2.4),round(wy+7),
+  'Q',round(wx+r+.5),round(wy+4),round(wx+r-.3),round(wy+2),
+  'L',round(wx+r-.5),round(wy-1),
+  'Q',round(wx),round(wy-2),round(wx-r),round(wy-1),'Z'].join(' ');
 }
 function svgEl(type,attrs,parent){
  const node=document.createElementNS(NS,type);
@@ -74,57 +157,23 @@ function ensureRig(person){
 function buildSide(parent,side,g){
  const sub=svgEl('g',{'data-arm-side':side},parent);
  if(side==='right')sub.setAttribute('transform','translate(180 0) scale(-1 1)');
- const {sleeveX:sx,sleeveY:sy,elbowX:ex,elbowY:ey,wristX:wx,wristY:wy,handY:hy}=g;
- // A single continuous tapered skin silhouette beneath the original shirt.
- // The outer contour swells near the upper arm, narrows at the elbow and
- // tapers towards the wrist. No horizontal elbow/wrist cuff or segmented pipe.
- const arm=[
-  'M',round(sx-6.8),round(sy-1.5),
-  'C',round(sx-10.5),round(sy+12),round(ex-8.2),round(ey-16),round(ex-7.3),ey,
-  'C',round(ex-7.8),round(ey+11),round(wx-5.4),round(wy-14),round(wx-4.8),wy,
-  'Q',wx,round(wy+2.2),round(wx+4.5),round(wy-.5),
-  'C',round(wx+5),round(wy-13),round(ex+6.8),round(ey+12),round(ex+6),round(ey-1),
-  'C',round(ex+6.4),round(ey-16),round(sx+6.8),round(sy+7),round(sx+6),round(sy-1.5),
-  'Q',sx,round(sy-3),round(sx-6.8),round(sy-1.5),'Z'
- ].join(' ');
- svgEl('path',{d:arm,fill:'url(#personaSkin)',
-  stroke:'var(--persona-shade)','stroke-opacity':'.21','stroke-width':'.72',
-  'stroke-linejoin':'round','stroke-linecap':'round'},sub);
-
- // Relaxed hand: narrow palm, visible thumb on the body's inner side and
- // three shallow fingertip contours. Scale stays proportional to the wrist.
- const hand=[
-  'M',round(wx-4.6),round(wy-1),
-  'C',round(wx-4.8),round(wy+3),round(wx-4.5),round(wy+7),round(wx-4.3),round(wy+10),
-  'L',round(wx-4),round(hy-3.8),
-  'Q',round(wx-3.8),round(hy-.3),round(wx-2.6),round(hy-.1),
-  'Q',round(wx-1.4),round(hy+.1),round(wx-1.2),round(hy-2.3),
-  'Q',round(wx-.9),round(hy+.9),round(wx+.7),round(hy+.9),
-  'Q',round(wx+2.3),round(hy+.7),round(wx+2.2),round(hy-2),
-  'Q',round(wx+2.6),round(hy+.4),round(wx+3.8),round(hy-.2),
-  'Q',round(wx+5.3),round(hy-1),round(wx+4.9),round(hy-3.5),
-  'L',round(wx+4.2),round(wy+10.5),
-  'Q',round(wx+5.2),round(wy+12.2),round(wx+7),round(wy+10.5),
-  'Q',round(wx+7.5),round(wy+9),round(wx+6.5),round(wy+7.2),
-  'Q',round(wx+4.5),round(wy+5),round(wx+4.2),round(wy+2.5),
-  'L',round(wx+4.3),round(wy-1),
-  'Q',wx,round(wy-3),round(wx-4.6),round(wy-1),'Z'
- ].join(' ');
- svgEl('path',{d:hand,fill:'url(#personaSkin)',
-  stroke:'var(--persona-shade)','stroke-opacity':'.24','stroke-width':'.6',
-  'stroke-linejoin':'round','stroke-linecap':'round'},sub);
- // Very faint finger lines; avoid wrist bands and drawn-on cartoon knuckles.
- svgEl('path',{d:[
-  'M',round(wx-.9),round(hy-5),'L',round(wx-.9),round(hy-2.4),
-  'M',round(wx+2.1),round(hy-5.1),'L',round(wx+2.1),round(hy-2.1)
- ].join(' '),fill:'none',stroke:'var(--persona-shade)',
-  'stroke-opacity':'.13','stroke-width':'.55','stroke-linecap':'round'},sub);
- // Short elbow shadow (not a horizontal seam across the limb).
- svgEl('path',{d:[
-  'M',round(ex+1),round(ey+3),
-  'Q',round(ex+3.5),round(ey+1.3),round(ex+4),round(ey-1)
- ].join(' '),fill:'none',stroke:'var(--persona-shade)',
-  'stroke-opacity':'.11','stroke-width':'.7','stroke-linecap':'round'},sub);
+ svgEl('path',{d:createArmOutlineV5(g),fill:'url(#personaSkin)',
+  stroke:'var(--persona-shade)','stroke-opacity':'.19','stroke-width':'.65',
+  'stroke-linecap':'round','stroke-linejoin':'round'},sub);
+ svgEl('path',{d:createHandOutlineV5(g),fill:'url(#personaSkin)',
+  stroke:'var(--persona-shade)','stroke-opacity':'.20','stroke-width':'.55',
+  'stroke-linecap':'round','stroke-linejoin':'round'},sub);
+ // Two low-contrast, continuous highlights. No knuckles or wrist seams.
+ svgEl('path',{d:['M',round(g.upperArmX+2.2),round(g.upperArmY-3),
+  'Q',round(g.elbowX+3),round(g.elbowY-5),
+  round(g.forearmX+2),round(g.forearmY+1)].join(' '),
+  fill:'none',stroke:'var(--persona-light)','stroke-opacity':'.08',
+  'stroke-width':'1.2','stroke-linecap':'round'},sub);
+ svgEl('path',{d:['M',round(g.elbowX+3),round(g.elbowY),
+  'Q',round(g.elbowX+4),round(g.elbowY+4),
+  round(g.elbowX+3),round(g.elbowY+6)].join(' '),
+  fill:'none',stroke:'var(--persona-shade)','stroke-opacity':'.10',
+  'stroke-width':'.55','stroke-linecap':'round'},sub);
  return sub;
 }
 function drawRig(person,geometry){
@@ -164,6 +213,6 @@ function setMode(value){
 window.getAdaptiveCutoutPlacementV5=getAdaptiveCutoutPlacementV5;
 window.updateWardrobeBodyRigV5=update;
 window.setAvatarBodyRigMode=setMode;
-window.__vithuBodyV5Test={calculateRig,drawRig,mapGarmentFitV5,getAdaptiveCutoutPlacementV5};
+window.__vithuBodyV5Test={calculateRig,drawRig,mapGarmentFitV5,getAdaptiveCutoutPlacementV5,createArmOutlineV5,createHandOutlineV5,RIG_LANDMARKS,RIG_RADII,BUILD_RADIUS_SCALE};
 window.renderAvatarV2?.(); // First visual render after the new module is available.
 })();
