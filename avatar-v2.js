@@ -425,9 +425,9 @@ function quickPicker(){
  picker.hidden=false;
 }
 function syncAvatarMode(){
- const mode=avatarRenderMode==='original'?'original':'stylized';
+ const mode=avatarRenderMode==='original'?'original':avatarRenderMode==='silhouette'?'silhouette':'stylized';
  modeSelect.value=mode;
- const useStyle=view==='styled'&&mode==='stylized';
+ const useStyle=view==='styled'&&mode!=='original';
  figure.classList.toggle('avatar-v2-stylized',useStyle);
  document.getElementById('avatarPanel')?.classList.toggle('v3-studio-mode',useStyle);
  const edit=document.getElementById('avatar-adjust');
@@ -439,17 +439,24 @@ function drawAvatarV2(){
  const active=c=>{const id=chosen[c];return id?items.find(it=>it.id===id&&it.category===c&&it.image):null};
  const bottom=active('bottom'),top=active('top'),shoe=active('shoes'),coat=active('outerwear');
  window.renderGarmentDrivenRig?.({top,bottom,shoes:shoe,outerwear:coat});
- if(bottom)pantsTemplate(bottom);
- if(top)topTemplate(top,'top');
- if(coat)topTemplate(coat,'outerwear');
- if(shoe)shoesTemplate(shoe);
+ // Original silhouette uses the actual local alpha cutout; a failed alpha crop
+ // falls back individually to the previous stylized garment renderer.
+ const natural=avatarRenderMode==='silhouette';
+ const draw=(item,cat,fallback)=>{
+  if(!item)return;
+  if(!natural||!window.renderNaturalCutoutV4?.(item,cat,svg))fallback();
+ };
+ draw(bottom,'bottom',()=>pantsTemplate(bottom));
+ draw(top,'top',()=>topTemplate(top,'top'));
+ draw(coat,'outerwear',()=>topTemplate(coat,'outerwear'));
+ draw(shoe,'shoes',()=>shoesTemplate(shoe));
  syncAvatarMode();
 }
 function renderAvatarV2(){
  quickPicker();drawAvatarV2();
 }
 function setAvatarRenderMode(value){
- if(value!=='original'&&value!=='stylized')return;
+ if(value!=='original'&&value!=='stylized'&&value!=='silhouette')return;
  avatarRenderMode=value;
  renderAvatarV2();
  if(storageReady)persist().catch(e=>console.error('Avatar mode save failed',e));
