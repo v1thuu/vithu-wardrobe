@@ -116,7 +116,7 @@ function computeRig(garments,profile,contours={}){
  const topDefault={fitted:.96,regular:1,loose:1.08,longSleeve:1.07,'':1}[topType];
  const pantsDefault={slim:.96,straight:1,wide:1.09,'':1}[pantsType];
  const footDefault={regular:1,chunky:1.075,boot:1.025,'':1}[shoeType];
- const t=contours.top||contours.outerwear, p=contours.bottom,sh=contours.shoes;
+ const t=garments.outerwear?contours.outerwear:contours.top, p=contours.bottom,sh=contours.shoes;
  // Extracted garment contours refine the subtype slightly, but never define
  // real-world body measurements or allow extreme warping.
  const shirtRatio=t&&t.rows.chest&&t.rows.shoulder?t.rows.shoulder/t.rows.chest:1;
@@ -168,6 +168,8 @@ function applyRig(rig){
  current=rig;window.__wardrobeRigV3=rig;
 }
 function renderGarmentDrivenRig(garments){
+ const dropdown=document.getElementById('avatarMorphMode');
+ if(dropdown&&dropdown.value!==avatarMorphMode)dropdown.value=avatarMorphMode;
  if(view!=='styled'||avatarRenderMode==='original'||avatarMorphMode==='classic'){
   restoreClassic();return current;
  }
