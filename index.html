@@ -464,7 +464,7 @@ function batchUpdate(){
  $('batchReviewCount').textContent=(batchImport.index+1)+' / '+total+' · '+(batchImport.modelStep===1?'B4':batchImport.modelStep===2?'Fertig':'B2');
  $('batchReviewProgress').style.width=Math.min(100,Math.round(100*(batchImport.index+batchImport.modelStep/2)/Math.max(total,1)))+'%';
  $('batchSkipBtn').disabled=!!batchImport.skipRequested;
- $('batchSkipBtn').textContent=batchImport.busy?'Nach Analyse überspringen':'Foto überspringen';
+ $('batchSkipBtn').textContent=batchImport.busy?'Foto jetzt überspringen':'Foto überspringen';
  $('saveAllSuggestions').style.display='none';
 }
 function batchClear(){
@@ -539,7 +539,7 @@ async function batchNextPhoto(){
  const slowTimer=setTimeout(()=>{
   if(batchImport.active&&batchImport.busy&&run===batchImport.run){
    batchImport.slow=true;batchUpdate();
-   $('smartImportStatus').textContent='Diese Analyse dauert ungewöhnlich lange. B2/B4 arbeiten lokal auf dem iPhone. Ein laufendes KI-Modell lässt sich hier nicht sofort stoppen.';
+   $('smartImportStatus').textContent='Die KI braucht ungewöhnlich lange. Du kannst das Foto jetzt überspringen oder den Import beenden.';
   }
  },65000);
  try{await onPhoto({target:{files:[file]}},true);}
