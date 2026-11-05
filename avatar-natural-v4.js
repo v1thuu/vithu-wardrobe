@@ -99,6 +99,7 @@ function setNaturalAvatarGeometryV4(enabled){
  person.setAttribute('viewBox',box);person.setAttribute('height',height);
  garments.setAttribute('viewBox',box);garments.setAttribute('height',height);
  figure.classList.toggle('avatar-v4-tall',enabled);
+ const stage=document.getElementById('stage');if(stage)stage.style.minHeight=enabled?'490px':'';
 }
 function renderNaturalCutoutV4(item,category,svg){
  if(avatarRenderMode!=='silhouette')return false;
