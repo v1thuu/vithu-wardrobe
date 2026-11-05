@@ -10,8 +10,8 @@ const MAX_CACHE=28;
 const shapeAnchors={
  top:{centerX:90,startY:80,maxWidth:138,maxHeight:142},
  outerwear:{centerX:90,startY:78,maxWidth:148,maxHeight:154},
- bottom:{centerX:90,startY:207,maxWidth:110,maxHeight:132},
- shoes:{centerX:90,endY:358,maxWidth:146,maxHeight:45}
+ bottom:{centerX:90,startY:208,maxWidth:124,maxHeight:223},
+ shoes:{centerX:90,endY:448,maxWidth:146,maxHeight:45}
 };
 const svgNS='http://www.w3.org/2000/svg';
 function alphaBounds(pixels,width,height){
@@ -81,6 +81,25 @@ function analyze(item,category){
  img.src=item.image;
  return entry;
 }
+function setNaturalAvatarGeometryV4(enabled){
+ const figure=document.getElementById('figure');
+ const person=figure?.querySelector('#personaDrawing');
+ const lower=person?.querySelector('#personaLowerBody');
+ const garments=document.getElementById('avatarV2Garments');
+ if(!figure||!person||!lower||!garments)return;
+ // The previous 365 px avatar had disproportionately short legs. In the
+ // natural-cutout mode the lower body is 1.5x longer, while the face and
+ // entire upper body keep their original dimensions.
+ const build=avatarProfile?.build||'athletic';
+ const widthScale={lean:.94,athletic:1,broad:1.085}[build]||1;
+ const horizontal='translate(90 0) scale('+widthScale+' 1) translate(-90 0)';
+ lower.setAttribute('transform',enabled?horizontal+' translate(0 -104) scale(1 1.5)':horizontal);
+ const height=enabled?450:365;
+ const box='0 0 180 '+height;
+ person.setAttribute('viewBox',box);person.setAttribute('height',height);
+ garments.setAttribute('viewBox',box);garments.setAttribute('height',height);
+ figure.classList.toggle('avatar-v4-tall',enabled);
+}
 function renderNaturalCutoutV4(item,category,svg){
  if(avatarRenderMode!=='silhouette')return false;
  const entry=analyze(item,category),shape=shapeAnchors[category];
@@ -106,6 +125,7 @@ function renderNaturalCutoutV4(item,category,svg){
  group.append(image);svg.append(group);
  return true;
 }
+window.setNaturalAvatarGeometryV4=setNaturalAvatarGeometryV4;
 window.renderNaturalCutoutV4=renderNaturalCutoutV4;
 window.__vithuNaturalV4Test={alphaBounds,cache,shapeAnchors};
 window.renderAvatarV2?.();
