@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feat/avatar-v5-joint-rig-safe-prototype-20261105
+      - fix/v5-sleeve-contours-and-hand-proportions-20261105
   pull_request:
     paths:
       - 'index.html'
@@ -25,3 +26,5 @@ jobs:
         run: node tests/v4-stability.mjs
       - name: New body rig and safe fallback
         run: node tests/v5-body-rig.mjs
+      - name: Sleeve anchors preserve working cutouts
+        run: node tests/v5-sleeve-contours.mjs

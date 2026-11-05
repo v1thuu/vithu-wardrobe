@@ -31,11 +31,45 @@ function alphaBounds(pixels,width,height){
  if(regionWidth<6||regionHeight<6)return null;
  return {x:minX,y:minY,width:regionWidth,height:regionHeight,coverage:opaque/(width*height)};
 }
+// Locate actual short-sleeve tips in the transparent garment, rather than
+// estimating an arm's origin from the overall product-image rectangle.
+// If a convincing bilateral inward step cannot be found, use V5's old anchor.
+function detectSleeveContour(pixels,width,height){
+ if(!pixels||width<42||height<45)return null;
+ const edges=[];
+ for(let y=0;y<height;y++){
+  let left=width,right=-1,ink=0;
+  for(let x=0;x<width;x++)if(pixels[(y*width+x)*4+3]>=90){
+   if(x<left)left=x;if(x>right)right=x;ink++;
+  }
+  edges.push(ink>=Math.max(6,width*.08)?{left,right}:null);
+ }
+ const delta=Math.max(3,Math.round(height*.047));
+ let best=null;
+ for(let y=Math.round(height*.24);y<Math.round(height*.61);y++){
+  const before=edges[y-delta],after=edges[y+delta];
+  if(!before||!after)continue;
+  const leftJump=after.left-before.left;
+  const rightJump=before.right-after.right;
+  const threshold=Math.max(4,width*.055);
+  if(leftJump<threshold||rightJump<threshold)continue;
+  // Require BOTH sleeve ends to retreat. A trouser crease or tilted edge
+  // is not enough to establish a shirt sleeve.
+  const score=Math.min(leftJump,rightJump)/width;
+  if(!best||score>best.score)best={
+   left:(before.left+after.left)/(2*width),
+   right:(before.right+after.right)/(2*width),
+   y:y/height,score
+  };
+ }
+ if(!best||best.left>=.45||best.right<=.55||best.right-best.left<.40)return null;
+ return best;
+}
 function analyze(item,category){
  if(!item||!/^data:image\/(?:png|webp|jpe?g);base64,/i.test(item.image||''))return null;
  const key=category+':'+item.id,seen=cache.get(key);
  if(seen&&seen.source===item.image)return seen;
- const entry={source:item.image,status:'loading',url:null,aspect:null};
+ const entry={source:item.image,status:'loading',url:null,aspect:null,sleeves:null};
  cache.set(key,entry);
  if(cache.size>MAX_CACHE)cache.delete(cache.keys().next().value);
  const img=new Image();
@@ -69,6 +103,13 @@ function analyze(item,category){
    if(latest!==entry||latest.source!==item.image)return;
    entry.url=out.toDataURL('image/png');
    entry.aspect=out.width/out.height;
+   if(category==='top'){
+    // This optional measurement must NEVER discard a valid clothing cutout.
+    try{
+     const cropPixels=out.getContext('2d',{willReadFrequently:true})?.getImageData(0,0,out.width,out.height)?.data;
+     entry.sleeves=cropPixels?detectSleeveContour(cropPixels,out.width,out.height):null;
+    }catch{entry.sleeves=null;}
+   }
    entry.status='ready';
    if(chosen[category]===item.id&&view==='styled'&&avatarRenderMode==='silhouette')
     window.renderAvatarV2?.();
@@ -117,6 +158,17 @@ function getNaturalCutoutPlacementV4(item,category){
  if(entry?.status!=='ready'||!entry.url)return null;
  return calculateNaturalPlacementV4(category,entry.aspect);
 }
+function getNaturalSleeveFitV4(item,category){
+ if(category!=='top')return null;
+ const entry=analyze(item,category);
+ if(entry?.status!=='ready'||!entry.sleeves)return null;
+ const place=calculateNaturalPlacementV4(category,entry.aspect);
+ if(!place)return null;
+ const {left,right,y,score}=entry.sleeves;
+ return {left:place.x+place.width*left,
+  right:place.x+place.width*right,
+  y:place.y+place.height*y,confidence:score};
+}
 function renderNaturalCutoutV4(item,category,svg){
  if(avatarRenderMode!=='silhouette')return false;
  const entry=analyze(item,category),shape=shapeAnchors[category];
@@ -141,6 +193,7 @@ function renderNaturalCutoutV4(item,category,svg){
 window.setNaturalAvatarGeometryV4=setNaturalAvatarGeometryV4;
 window.renderNaturalCutoutV4=renderNaturalCutoutV4;
 window.getNaturalCutoutPlacementV4=getNaturalCutoutPlacementV4;
-window.__vithuNaturalV4Test={alphaBounds,cache,shapeAnchors};
+window.getNaturalSleeveFitV4=getNaturalSleeveFitV4;
+window.__vithuNaturalV4Test={alphaBounds,cache,shapeAnchors,detectSleeveContour};
 window.renderAvatarV2?.();
 })();
