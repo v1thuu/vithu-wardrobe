@@ -79,7 +79,12 @@ function buildReview(){
   (s.hybridReason||s.qualityReason||'Diese Freistellung sieht nicht wie ein vollständiges Kleidungsstück aus.'):
   (s.warning||s.hybridReason||'Prüfe Stoffkanten, Schuhe und mögliche Körperreste.');
  const actions=document.createElement('div');actions.className='batch-actions';
- const save=button(grade==='ready'?'✓ Speichern':grade==='review'?'Nach Prüfung speichern':'Nicht speicherbar','batch-primary',()=>saveSuggestion(i));
+ const save=button(grade==='ready'?'✓ Speichern':grade==='review'?'Nach Prüfung speichern':'Nicht speicherbar','batch-primary',async()=>{
+  if(!isActive()||batch.saving)return;
+  const owner=batch;owner.saving=true;save.disabled=true;
+  try{await saveSuggestion(i)}
+  finally{if(owner===batch){owner.saving=false;buildReview()}}
+ });
  if(grade==='reject')save.disabled=true;
  const fix=button('✏ Korrigieren','secondary',()=>refineSuggestion(i));
  const reject=button('Verwerfen','secondary batch-reject',()=>dropSuggestion(i));
@@ -102,7 +107,7 @@ async function nextPhoto(){
  current.processing=true;
  const task=++serial;
  current.current++;
- current.currentHasSuggestions=false;current.reviewedInPhoto=0;
+ current.currentHasSuggestions=false;current.reviewedInPhoto=0;current.manualSavedThisPhoto=false;
  if(current.current>=current.files.length){
   finish();return;
  }
@@ -130,7 +135,7 @@ async function nextPhoto(){
 function skipCurrent(){
  if(!isActive()||batch.processing)return;
  if(smartSuggestions.length&&!confirm('Verbleibende Vorschläge dieses Fotos verwerfen und fortfahren?'))return;
- batch.skipped+=smartSuggestions.length?0:1;
+ batch.skipped+=smartSuggestions.length||batch.currentHasSuggestions||batch.manualSavedThisPhoto?0:1;
  smartSuggestions=[];renderSmartSuggestions();
  nextPhoto().catch(error=>console.error('Next batch photo',error));
 }
@@ -144,6 +149,10 @@ function onDecision(kind){
  }else{
   nextPhoto().catch(error=>console.error('Next batch photo',error));
  }
+}
+function onManualSave(){
+ if(!isActive())return;
+ batch.saved++;batch.manualSavedThisPhoto=true;statusLine();
 }
 function finish(){
  if(!batch)return;
@@ -179,7 +188,7 @@ function begin(files){
  if(!valid.length){toast('Bitte Bilddateien auswählen');return;}
  if(valid.length===1){onPhoto({target:{files:valid}}).catch(e=>console.error('Single import',e));return;}
  if(isActive()&&!stop())return;
- batch={active:true,files:valid,current:-1,processing:false,fileName:'',saved:0,discarded:0,skipped:0,reviewedInPhoto:0,currentHasSuggestions:false};
+ batch={active:true,files:valid,current:-1,processing:false,fileName:'',saved:0,discarded:0,skipped:0,reviewedInPhoto:0,currentHasSuggestions:false,manualSavedThisPhoto:false,saving:false};
  switchWardrobeTab('add',{scroll:false});$('closetAdvancedOptions').open=false;
  $('batchImportBar').hidden=false;
  if(files.length>MAX_PHOTOS)toast('Maximal '+MAX_PHOTOS+' Fotos pro Durchgang');
@@ -193,5 +202,5 @@ function handleUploadSelection(event){
  begin(selected);
 }
 window.handleUploadSelection=handleUploadSelection;
-window.batchImportController={get active(){return isActive()},begin,stop,render:buildReview,onDecision,skipCurrent};
+window.batchImportController={get active(){return isActive()},begin,stop,render:buildReview,onDecision,onManualSave,skipCurrent};
 })();
