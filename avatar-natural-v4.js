@@ -101,19 +101,31 @@ function setNaturalAvatarGeometryV4(enabled){
  figure.classList.toggle('avatar-v4-tall',enabled);
  const stage=document.getElementById('stage');if(stage)stage.style.minHeight=enabled?'490px':'';
 }
+function calculateNaturalPlacementV4(category,aspect){
+ const shape=shapeAnchors[category];
+ if(!shape||!Number.isFinite(aspect)||aspect<=0)return null;
+ let width=Math.min(shape.maxWidth,shape.maxHeight*aspect);
+ let height=width/aspect;
+ if(height>shape.maxHeight){height=shape.maxHeight;width=height*aspect;}
+ const x=shape.centerX-width/2;
+ const y=shape.endY!=null?shape.endY-height:shape.startY;
+ if(!Number.isFinite(x+y+width+height)||width<2||height<2)return null;
+ return {x,y,width,height};
+}
+function getNaturalCutoutPlacementV4(item,category){
+ const entry=analyze(item,category);
+ if(entry?.status!=='ready'||!entry.url)return null;
+ return calculateNaturalPlacementV4(category,entry.aspect);
+}
 function renderNaturalCutoutV4(item,category,svg){
  if(avatarRenderMode!=='silhouette')return false;
  const entry=analyze(item,category),shape=shapeAnchors[category];
  if(!entry||entry.status!=='ready'||!entry.url||!shape)return false;
  // Uniform scaling: garment aspect ratio and precise outline remain intact.
  // Unlike the V3 renderer, there is no body/leg/sleeve texture stretching.
- const aspect=entry.aspect;
- let width=Math.min(shape.maxWidth,shape.maxHeight*aspect);
- let height=width/aspect;
- if(height>shape.maxHeight){height=shape.maxHeight;width=height*aspect;}
- const x=shape.centerX-width/2;
- const y=shape.endY!=null?shape.endY-height:shape.startY;
- if(!Number.isFinite(x+y+width+height)||width<2||height<2)return false;
+ const position=calculateNaturalPlacementV4(category,entry.aspect);
+ if(!position)return false;
+ const {x,y,width,height}=position;
  const group=document.createElementNS(svgNS,'g');
  group.setAttribute('data-avatar-slot',category);
  group.setAttribute('data-renderer','original-silhouette-v4');
@@ -128,6 +140,7 @@ function renderNaturalCutoutV4(item,category,svg){
 }
 window.setNaturalAvatarGeometryV4=setNaturalAvatarGeometryV4;
 window.renderNaturalCutoutV4=renderNaturalCutoutV4;
+window.getNaturalCutoutPlacementV4=getNaturalCutoutPlacementV4;
 window.__vithuNaturalV4Test={alphaBounds,cache,shapeAnchors};
 window.renderAvatarV2?.();
 })();
