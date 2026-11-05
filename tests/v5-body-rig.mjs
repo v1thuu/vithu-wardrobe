@@ -74,6 +74,18 @@ const narrow=compute({width:100,y:80,height:132},'athletic');
 const loose=compute({width:148,y:80,height:132},'athletic');
 assert.ok(narrow.sleeveX>loose.sleeveX+10,'sleeve-dependent shoulder width');
 assert.ok(loose.wristY>loose.elbowY&&loose.handY>loose.wristY,'anatomical landmark ordering');
+const naked=compute(null,'athletic');
+assert.ok(naked.elbowX<naked.sleeveX-6,'even without a shirt the elbow bends outward');
+assert.ok(naked.wristX>naked.elbowX+4,'wrist returns inward, no straight tube');
+assert.ok(naked.wristY>naked.elbowY+28,'forearm has anatomical length');
+assert.ok(naked.handY-naked.wristY>=17&&naked.handY-naked.wristY<=22,'hand length stays proportional');
+assert.ok(narrow.wristX>narrow.elbowX+4&&loose.wristX>loose.elbowX+4,
+ 'fitted and oversized shirts both retain arm articulation');
+const armShape=group.children[0].children[0].attrs.d;
+const handShape=group.children[0].children[1].attrs.d;
+assert.ok(!/NaN|Infinity/.test(armShape+handShape),'no invalid SVG paths');
+assert.ok((handShape.match(/Q/g)||[]).length>=7,'hand has subtle individual fingertip contours');
+
 const extreme=compute({width:10000,y:-10000,height:1},'broad');
 assert.ok(extreme.sleeveX>=24&&extreme.sleeveY>=114&&extreme.handY<=238,'large garment values clamped');
 const count=upper.children.length;
