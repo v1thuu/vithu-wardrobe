@@ -420,33 +420,34 @@ async function retrySmartRoute(){
 
 // One photo is analysed at a time using the existing SegFormer/FASHN hybrid router.
 // Candidate images are reviewed one by one; only explicitly approved ones are persisted.
-const batchImport={active:false,files:[],index:-1,busy:false,saved:0,discarded:0,run:0};
+const batchImport={active:false,files:[],index:-1,busy:false,saved:0,discarded:0,run:0,skipRequested:false,slow:false};
 function batchUpdate(){
  const bar=$('batchReviewBar');if(!bar)return;
  bar.hidden=!batchImport.active;
  $('smartImportBox').classList.toggle('batch-active',batchImport.active);
  if(!batchImport.active)return;
  const total=batchImport.files.length;
- $('batchReviewTitle').textContent=batchImport.busy?'Foto wird analysiert …':smartSuggestions.length?'Kleidungsstück prüfen':'Foto geprüft';
+ $('batchReviewTitle').textContent=batchImport.skipRequested?'Überspringen vorgemerkt':batchImport.busy?(batchImport.slow?'KI braucht ungewöhnlich lange …':'Foto wird analysiert …'):smartSuggestions.length?'Kleidungsstück prüfen':'Foto geprüft';
  $('batchReviewCount').textContent=(batchImport.index+1)+' / '+total+' Fotos';
  $('batchReviewProgress').style.width=Math.round(100*(batchImport.index+1)/Math.max(total,1))+'%';
- $('batchSkipBtn').disabled=batchImport.busy;
- $('batchSkipBtn').textContent=smartSuggestions.length?'Foto überspringen':'Nächstes Foto';
+ $('batchSkipBtn').disabled=!!batchImport.skipRequested;
+ $('batchSkipBtn').textContent=batchImport.busy?'Nach Analyse überspringen':smartSuggestions.length?'Foto überspringen':'Nächstes Foto';
+ $('saveAllSuggestions').style.display='none';
 }
 function batchClear(){
- batchImport.active=false;batchImport.files=[];batchImport.index=-1;batchImport.busy=false;batchImport.run++;
+ batchImport.active=false;batchImport.files=[];batchImport.index=-1;batchImport.busy=false;batchImport.skipRequested=false;batchImport.slow=false;batchImport.run++;
  batchUpdate();
 }
 async function batchCancel(){
  if(!batchImport.active)return;
- if(batchImport.busy)return toast('Analyse läuft – danach beenden');
- if(smartSuggestions.length&&!confirm('Mehrfach-Import beenden? Die noch nicht gespeicherten Vorschläge dieses Fotos werden verworfen.'))return;
- batchClear();smartSuggestions=[];renderSmartSuggestions();
+ if(!batchImport.busy&&smartSuggestions.length&&!confirm('Mehrfach-Import beenden? Die noch nicht gespeicherten Vorschläge dieses Fotos werden verworfen.'))return;
+ ++importSerial;batchClear();smartSuggestions=[];renderSmartSuggestions();
  $('smartImportStatus').style.display='block';
  $('smartImportStatus').textContent='Mehrfach-Import beendet. Bereits gespeicherte Kleidungsstücke bleiben erhalten.';
 }
 async function batchSkipCurrent(){
- if(!batchImport.active||batchImport.busy)return;
+ if(!batchImport.active)return;
+ if(batchImport.busy){batchImport.skipRequested=true;batchUpdate();return;}
  if(smartSuggestions.length&&!confirm('Restliche Vorschläge dieses Fotos verwerfen und mit dem nächsten Foto fortfahren?'))return;
  batchImport.discarded+=smartSuggestions.length;
  smartSuggestions=[];renderSmartSuggestions();await batchNextPhoto();
@@ -463,10 +464,28 @@ async function batchNextPhoto(){
  }
  batchImport.index++;
  const file=batchImport.files[batchImport.index],run=batchImport.run;
- batchImport.busy=true;batchUpdate();
- await onPhoto({target:{files:[file]}},true);
+ batchImport.busy=true;batchImport.skipRequested=false;batchImport.slow=false;batchUpdate();
+ // This watchdog is informational only. WebAssembly inference cannot be safely
+ // killed by a JS timeout; pressing Skip defers until the current job yields.
+ const slowTimer=setTimeout(()=>{
+  if(batchImport.active&&batchImport.busy&&run===batchImport.run){
+   batchImport.slow=true;batchUpdate();
+   $('smartImportStatus').textContent='Die KI arbeitet ungewöhnlich lange. Du kannst das Foto nach der laufenden Analyse überspringen oder den Import beenden. Falls der Browser gar nicht reagiert, Seite neu laden.';
+  }
+ },65000);
+ try{await onPhoto({target:{files:[file]}},true);}
+ catch(err){console.error('Batch photo failed',err);
+  $('smartImportStatus').textContent='⚠ Dieses Foto konnte nicht verarbeitet werden. Nächstes Foto wählen.';
+ }
+ finally{clearTimeout(slowTimer);}
  if(!batchImport.active||run!==batchImport.run)return;
  batchImport.busy=false;
+ if(batchImport.skipRequested){
+  batchImport.discarded+=smartSuggestions.length;
+  smartSuggestions=[];renderSmartSuggestions();
+  batchImport.skipRequested=false;batchUpdate();
+  await batchNextPhoto();return;
+ }
  batchUpdate();
  if(!smartSuggestions.length){
   $('smartImportBox').style.display='block';
@@ -507,7 +526,7 @@ async function onPhoto(e,fromBatch=false){
   if(serial!==importSerial)return;
   sourceImg=loadedPhoto;
   $('itemName').value='';crop=null;
-  const c=$('cropcanvas'),r=Math.min(1,850/Math.max(sourceImg.width,sourceImg.height));
+  const c=$('cropcanvas'),r=Math.min(1,(fromBatch?640:850)/Math.max(sourceImg.width,sourceImg.height));
   c.width=Math.max(1,Math.round(sourceImg.width*r));c.height=Math.max(1,Math.round(sourceImg.height*r));
   c.getContext('2d').drawImage(sourceImg,0,0,c.width,c.height);
   $('rect').style.display='none';setCropTool('select');setZoom(1);centerCrop();
@@ -956,13 +975,17 @@ async function runHybridImport(serial,stats){
   if(serial!==importSerial)return;
  }
  const status=$('smartImportStatus'),kind=chooseHybridKind(stats);
- status.textContent='Kleidung erkennen · 1/2';
+ const inBatch=batchImport.active;
+ status.textContent=inBatch?'Basis-KI laden / Kleidung erkennen (B2) …':'Kleidung erkennen · 1/2';
  const first=await smartImportBeta('legacy',{silent:true});
  if(serial!==importSerial)return;
- status.textContent='Freistellung optimieren · 2/2';
- const second=await smartImportBeta('fashn',{silent:true});
+ let second=null;
+ if(!inBatch){
+  status.textContent='Freistellung optimieren · 2/2';
+  second=await smartImportBeta('fashn',{silent:true});
+ }
  if(serial!==importSerial)return;
- if(!first&&!second){status.textContent='KI nicht verfügbar · Manuell korrigieren';return}
+ if(!first&&!second){status.textContent='KI nicht verfügbar · Foto überspringen oder manuell korrigieren';return}
  const height=$('cropcanvas').height;
  smartSuggestions=mergeHybridCandidates(first,second,kind,height);
  if(first&&second)fashionComparison={serial,old:first,alt:second};
