@@ -4,6 +4,7 @@ on:
     branches:
       - feat/avatar-v5-joint-rig-safe-prototype-20261105
       - fix/v5-sleeve-contours-and-hand-proportions-20261105
+      - feat/v5-cutout-fit-measurements-20261105
   pull_request:
     paths:
       - 'index.html'
@@ -28,3 +29,5 @@ jobs:
         run: node tests/v5-body-rig.mjs
       - name: Sleeve anchors preserve working cutouts
         run: node tests/v5-sleeve-contours.mjs
+      - name: Check measured alpha garment fit and safe mapping
+        run: node tests/v5-fit-metrics.mjs
