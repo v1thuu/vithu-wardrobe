@@ -449,7 +449,9 @@ function drawAvatarV2(){
  const natural=avatarRenderMode==='silhouette';
  const draw=(item,cat,fallback)=>{
   if(!item)return;
-  if(!natural||!window.renderNaturalCutoutV4?.(item,cat,svg))fallback();
+  const fit=natural&&cat==='top'&&avatarBodyRigMode==='joint'
+   ?window.getAdaptiveCutoutPlacementV5?.(item,cat):null;
+  if(!natural||!window.renderNaturalCutoutV4?.(item,cat,svg,fit))fallback();
  };
  draw(bottom,'bottom',()=>pantsTemplate(bottom));
  draw(top,'top',()=>topTemplate(top,'top'));
