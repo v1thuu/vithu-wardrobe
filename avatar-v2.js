@@ -427,6 +427,10 @@ function quickPicker(){
 function syncAvatarMode(){
  const mode=avatarRenderMode==='original'?'original':avatarRenderMode==='silhouette'?'silhouette':'stylized';
  modeSelect.value=mode;
+ for(const [id,active] of [['avatarV4Natural',mode==='silhouette'],['avatarV4Illustrated',mode==='stylized']]){
+  const button=document.getElementById(id);
+  if(button){button.classList.toggle('active',active);button.classList.toggle('secondary',!active);}
+ }
  const useStyle=view==='styled'&&mode!=='original';
  figure.classList.toggle('avatar-v2-stylized',useStyle);
  document.getElementById('avatarPanel')?.classList.toggle('v3-studio-mode',useStyle);
