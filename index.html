@@ -237,12 +237,37 @@
 .inv-avatar-tuning .form{margin-top:9px}
 .inv-avatar-tuning label{font-size:11px;display:grid;gap:5px;color:#abb7b6}
 .inv-avatar-tuning select{width:100%}
+
+/* iPhone multi-photo review */
+.batch-import-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0;padding:12px;background:#1d2d24;border:1px solid #4b6f57;border-radius:14px}
+.batch-import-bar[hidden]{display:none!important}.batch-progress-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+.batch-progress-copy strong{font-size:13px;color:#b6f9ab;overflow-wrap:anywhere}.batch-progress-copy small{font-size:11px;color:#c3cdc4}
+.batch-cancel{flex:none;padding:9px;font-size:12px}
+.batch-candidate{max-width:800px;margin:10px auto 0;padding:13px;background:#22282c;border:1px solid #3f494a;border-radius:18px;display:flex;flex-direction:column;gap:12px}
+.batch-candidate-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px}
+.batch-candidate-badge{font-size:10px;border-radius:14px;background:#3c4246;padding:6px 9px;white-space:nowrap}
+.batch-candidate-badge.good{background:#2e4933;color:#d0fbc5}.batch-candidate-badge.bad{background:#573139;color:#ffdae0}.batch-candidate-badge.warning{background:#54412a;color:#ffe3af}
+.batch-candidate-photo{display:block;width:100%;height:clamp(245px,58vw,390px);object-fit:contain;background:#f0f0ec;border-radius:12px}
+.batch-candidate-hint{font-size:12px;color:#c5cecb;line-height:1.5;margin:0}
+.batch-edit-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.batch-edit-row label{font-size:11px;color:#c6d0c8;display:grid;gap:5px;min-width:0}
+.batch-edit-row input,.batch-edit-row select{width:100%;min-width:0;padding:10px 7px;border-radius:10px;font-size:13px}
+.batch-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.batch-actions button{font-size:13px;padding:12px 6px;min-width:0}
+.batch-actions .batch-primary{grid-column:1/-1;background:#b4f5a7;color:#152217}
+.batch-actions .batch-primary:disabled{background:#474b50;color:#d1d1d1}
+.batch-more{padding-top:9px;border-top:1px solid #3b4949;font-size:12px}.batch-more summary{cursor:pointer}
+.batch-empty,.batch-finished,.batch-loading{text-align:center;padding:18px;background:#23292d;border-radius:14px;color:#c7d2cd}
+.batch-empty p,.batch-finished p,.batch-more p{font-size:12px;color:#bec9c5}
+.batch-empty .btnrow,.batch-finished .btnrow{justify-content:center}
+@media(max-width:365px){.batch-edit-row{grid-template-columns:1fr}.batch-candidate{padding:10px}}
 </style></head><body>
 <header class="wardrobe-header"><h1>VITHU <span>WARDROBE</span></h1><details class="app-settings"><summary>⚙</summary><div class="btnrow"><button class="secondary" onclick="exportBackup()">↓ Backup</button><label class="filebutton secondary">↑ Backup laden<input type="file" accept="application/json,.json" onchange="importBackup(event)"></label></div><small>Deine Kleidung wird lokal auf diesem Gerät gespeichert.</small></details></header>
 <nav class="wardrobe-tabs" role="tablist" aria-label="Hauptnavigation"><button id="tab-wardrobe" role="tab" aria-selected="true" class="active" onclick="switchWardrobeTab('wardrobe')">👕 Garderobe</button><button id="tab-add" role="tab" aria-selected="false" class="secondary" onclick="switchWardrobeTab('add')">＋ Hinzufügen</button><button id="tab-avatar" role="tab" aria-selected="false" class="secondary" onclick="switchWardrobeTab('avatar')">◉ Avatar</button></nav>
 <div class="layout"><section class="closet-hero wide" hidden><div><span class="closet-kicker">DEIN DIGITALER KLEIDERSCHRANK</span><h2>Deine Kleidung. Alles an einem Ort.</h2><p>Foto auswählen, Kleidungsstücke erkennen lassen, speichern. Den Rest hältst du einfach.</p></div><button class="closet-add" onclick="openImport()">＋ Kleidung hinzufügen</button></section><section class="panel wide closet-shelf tab-panel" id="closetShelf"><div class="sectionHead"><h2>Mein Kleiderschrank</h2><span class="chip" id="count">0 Teile</span></div><div class="inv-tools"><input type="search" placeholder="🔎 Kleidung suchen" aria-label="Inventar durchsuchen" oninput="inventorySearch=this.value.toLocaleLowerCase('de');render()"><select aria-label="Sortierung" onchange="inventorySort=this.value;render()"><option value="new">Neueste</option><option value="old">Älteste</option><option value="name">Name A–Z</option><option value="favorites">Favoriten</option></select></div><div id="invSummary" class="inv-summary"></div><div class="inv-catbar" id="invCatbar"></div><div class="grid inv-grid" id="grid"></div><details class="closet-advanced closet-display-settings"><summary>Darstellungsoptionen · Clean-Bilder aktualisieren</summary><div class="btnrow" style="margin:12px 0"><button class="secondary" onclick="buildAllShopLooks()" id="shopAllBtn">✨ Auto Clean für gesamte Garderobe</button></div><p class="muted">Produktansichten werden lokal erzeugt: neutraler Hintergrund, stärkere Zentrierung, leicht geglättete Kanten und etwas cleanerer Studio-Look. Das Original bleibt unverändert und wird weiterhin auf dem Avatar verwendet. Keine generative KI, keine echte Faltenrekonstruktion.</p></details></section><section class="panel wide closet-import tab-panel" id="importPanel" hidden><div class="sectionHead"><h2>Kleidung hinzufügen</h2><button class="secondary" onclick="closeImport()">✕</button></div>
 <div class="import-route"><span id="routeStatus" aria-live="polite">Foto auswählen</span><details id="routeOptions"><summary>Bildtyp ändern</summary><div class="tabs"><button id="mode-auto" class="active" onclick="setMode('auto');retrySmartRoute()">Automatisch</button><button id="mode-single" class="secondary" onclick="setMode('single');retrySmartRoute()">Produktfotos</button><button id="mode-worn" class="secondary" onclick="setMode('worn');retrySmartRoute()">Outfitfoto</button></div><div class="tabs"><button id="kind-auto" class="active" onclick="setHybridKind('auto')">Automatisch</button><button id="kind-model" class="secondary" onclick="setHybridKind('model')">Shop am Model</button><button id="kind-selfie" class="secondary" onclick="setHybridKind('selfie')">Spiegelselfie</button></div></details></div>
-<label class="f closet-file closet-photo-picker" for="upload"><span class="photo-picker-icon" aria-hidden="true">＋</span><span class="photo-picker-copy"><strong>Foto auswählen</strong><small id="selectedPhotoName">Aus der Galerie</small></span><input id="upload" type="file" accept="image/*" onchange="onPhoto(event)"></label>
+<label class="f closet-file closet-photo-picker" for="upload"><span class="photo-picker-icon" aria-hidden="true">＋</span><span class="photo-picker-copy"><strong>Fotos auswählen</strong><small id="selectedPhotoName">Einzeln oder bis zu 12 gleichzeitig</small></span><input id="upload" type="file" accept="image/*" multiple onchange="handleUploadSelection(event)"></label>
+<div id="batchImportBar" class="batch-import-bar" hidden aria-live="polite"><div class="batch-progress-copy"><strong id="batchProgress">Fotos werden geprüft</strong><small id="batchCounts"></small></div><button class="secondary batch-cancel" type="button" onclick="window.batchImportController?.stop()">Beenden</button></div>
 <details class="closet-extras"><summary>Hilfe &amp; Einstellungen</summary><p class="muted">Die Bilder werden auf deinem Gerät verarbeitet. Beim ersten KI-Import kann ein Modelldownload nötig sein.</p><div class="btnrow closet-retry"><button class="secondary" id="smartImportBtn" onclick="retrySmartRoute()">↻ Erneut analysieren</button></div></details>
 <div class="cropbox" id="smartImportBox"><p id="smartImportStatus" class="notice" style="display:none"></p><div class="grid" id="smartImportGrid"></div>
 <div class="btnrow"><button id="saveAllSuggestions" class="secondary" onclick="saveAllSuggestions()">✓ Geeignete Teile speichern</button></div></div>
@@ -1054,6 +1079,7 @@ function acceptQualityCompare(){
 }
 function renderSmartSuggestions(){
  refreshCandidateTiers();
+ if(window.batchImportController?.active){window.batchImportController.render();return;}
  const grid=$('smartImportGrid');if(!grid)return;grid.replaceChildren();
  const safe=smartSuggestions.filter(x=>x.grade==='ready');
  $('saveAllSuggestions').style.display=safe.length>1?'inline-flex':'none';
@@ -1154,7 +1180,30 @@ function resolveReviewSave(action){
  if(resolve)resolve(action);
  if(action==='fix'&&idx>=0)refineSuggestion(idx);
 }
-async function saveSuggestion(i){const s=smartSuggestions[i];if(!s)return;if(tierFromCandidate(s).grade==='reject')return toast('Bitte zuerst korrigieren');if(tierFromCandidate(s).grade!=='ready'&&(await requestReviewSave(i))!=='save')return;const name=$('sg-name-'+i)?.value?.trim()||s.name;const category=$('sg-cat-'+i)?.value||s.category;const clean=await createCleanProductImage(s.image,category).catch(()=>null);items.unshift({id:uid(),name,category,image:s.image,source:s.source==='shop-auto'?'shop-auto':'worn-auto',model:s.hybridEngine||undefined,clipped:!!s.clipped,shopImage:clean||undefined,showShop:!!clean});smartSuggestions.splice(i,1);await persist();render();renderSmartSuggestions();$('smartImportStatus').textContent=smartSuggestions.length?'Vorschlag gespeichert. Du kannst die restlichen speichern oder verwerfen.':'Alle Vorschläge verarbeitet.';if(!smartSuggestions.length)$('smartImportBox').style.display='none';toast('Vorschlag gespeichert')}
+async function saveSuggestion(i){
+ const candidate=smartSuggestions[i];if(!candidate)return;
+ const tier=tierFromCandidate(candidate);
+ if(tier.grade==='reject')return toast('Bitte zuerst korrigieren');
+ if(tier.grade!=='ready'&&(await requestReviewSave(i))!=='save')return;
+ if(!smartSuggestions.includes(candidate))return;
+ const name=$('sg-name-'+i)?.value?.trim()||candidate.name;
+ const category=$('sg-cat-'+i)?.value||candidate.category;
+ const clean=await createCleanProductImage(candidate.image,category).catch(()=>null);
+ if(!smartSuggestions.includes(candidate))return;
+ const entry={id:uid(),name,category,image:candidate.image,source:candidate.source==='shop-auto'?'shop-auto':'worn-auto',model:candidate.hybridEngine||undefined,clipped:!!candidate.clipped,shopImage:clean||undefined,showShop:!!clean};
+ items.unshift(entry);
+ try{await persist()}catch(error){
+  items=items.filter(it=>it!==entry);
+  alert('Speichern fehlgeschlagen. Der Vorschlag bleibt erhalten: '+(error?.message||'Speicherfehler'));return;
+ }
+ const index=smartSuggestions.indexOf(candidate);
+ if(index>=0)smartSuggestions.splice(index,1);
+ render();renderSmartSuggestions();
+ $('smartImportStatus').textContent=smartSuggestions.length?'Vorschlag gespeichert. Du kannst die restlichen speichern oder verwerfen.':'Alle Vorschläge verarbeitet.';
+ if(!smartSuggestions.length&&!window.batchImportController?.active)$('smartImportBox').style.display='none';
+ toast('Vorschlag gespeichert');
+ window.batchImportController?.onDecision('saved');
+}
 function dropSuggestion(i){
  const part=smartSuggestions[i];if(!part)return;
  smartSuggestions.splice(i,1);renderSmartSuggestions();
@@ -1162,6 +1211,7 @@ function dropSuggestion(i){
  $('smartImportStatus').textContent=smartSuggestions.length?'Fehl-Erkennung entfernt':'Fertig';
  if(!smartSuggestions.length)$('smartImportBox').style.display='none';
  toast('Verworfen');
+ window.batchImportController?.onDecision('discarded');
 }
 async function saveAllSuggestions(){
  const approved=smartSuggestions.filter(s=>tierFromCandidate(s).grade==='ready');
@@ -1201,7 +1251,7 @@ cropCanvas.addEventListener('touchstart',e=>{if(cropTool==='pan'||e.touches.leng
 cropCanvas.addEventListener('touchmove',e=>{if(cropTool==='pan'||e.touches.length!==1)return;moveSelection(e.touches[0]);if(e.cancelable)e.preventDefault()},{passive:false});
 cropCanvas.addEventListener('touchend',e=>{if(cropTool==='pan')return;endSelection(e);if(e.cancelable)e.preventDefault()},{passive:false});
 function resetCrop(){crop=null;activeDrag=null;showRect()}
-async function addItem(overrideImage=null){if(!sourceImg)return alert('Bitte zuerst ein Foto auswählen. Falls kein Editor erscheint: Datei über Safari auf einer Website statt in der iPhone-Dateivorschau öffnen.');let image;if(overrideImage){image=overrideImage}else if(mode==='worn'){if(!crop)return alert('Bitte zuerst im Fotobereich einen Rahmen um EIN Kleidungsstück ziehen.');const src=$('cropcanvas'),c=document.createElement('canvas');const f=Math.min(1,700/Math.max(crop.w,crop.h));c.width=Math.max(1,Math.round(crop.w*f));c.height=Math.max(1,Math.round(crop.h*f));c.getContext('2d').drawImage(src,crop.x,crop.y,crop.w,crop.h,0,0,c.width,c.height);image=c.toDataURL('image/jpeg',.86)}else image=scaledData(sourceImg,800);items.unshift({id:uid(),name:$('itemName').value.trim()||cats[$('itemCategory').value]+' '+(items.length+1),category:$('itemCategory').value,image,source:mode});await persist();render();toast('Teil gespeichert');$('itemName').value='';if(mode==='worn'){closeCutout();startNewCrop();$('cropstatus').textContent='✅ Teil gespeichert. Jetzt nächstes Kleidungsstück im selben Foto markieren.';$('cropbox').scrollIntoView({behavior:'smooth',block:'start'})}else{sourceImg=null;$('upload').value=''}}
+async function addItem(overrideImage=null){if(!sourceImg)return alert('Bitte zuerst ein Foto auswählen. Falls kein Editor erscheint: Datei über Safari auf einer Website statt in der iPhone-Dateivorschau öffnen.');let image;if(overrideImage){image=overrideImage}else if(mode==='worn'){if(!crop)return alert('Bitte zuerst im Fotobereich einen Rahmen um EIN Kleidungsstück ziehen.');const src=$('cropcanvas'),c=document.createElement('canvas');const f=Math.min(1,700/Math.max(crop.w,crop.h));c.width=Math.max(1,Math.round(crop.w*f));c.height=Math.max(1,Math.round(crop.h*f));c.getContext('2d').drawImage(src,crop.x,crop.y,crop.w,crop.h,0,0,c.width,c.height);image=c.toDataURL('image/jpeg',.86)}else image=scaledData(sourceImg,800);items.unshift({id:uid(),name:$('itemName').value.trim()||cats[$('itemCategory').value]+' '+(items.length+1),category:$('itemCategory').value,image,source:mode});await persist();render();toast('Teil gespeichert');window.batchImportController?.onManualSave();$('itemName').value='';if(mode==='worn'){closeCutout();startNewCrop();$('cropstatus').textContent='✅ Teil gespeichert. Jetzt nächstes Kleidungsstück im selben Foto markieren.';$('cropbox').scrollIntoView({behavior:'smooth',block:'start'})}else{sourceImg=null;$('upload').value=''}}
 async function removeItem(id){if(!confirm('Kleidungsstück wirklich löschen?'))return;items=items.filter(x=>x.id!==id);Object.keys(chosen).forEach(k=>{if(chosen[k]===id)delete chosen[k]});delete avatarFits[id];await persist();render()}
 function defaultFitFor(cat){return cat==='top'?{x:0,y:7,scale:106,rot:0}:cat==='bottom'?{x:0,y:-8,scale:108,rot:0}:cat==='outerwear'?{x:0,y:5,scale:111,rot:0}:cat==='shoes'?{x:0,y:0,scale:101,rot:0}:cat==='belt'?{x:0,y:-1,scale:102,rot:0}:cat==='bag'?{x:6,y:0,scale:100,rot:0}:{x:0,y:0,scale:100,rot:0}}
 async function ensureDefaultFit(cat,id){if(!id||avatarFits[id])return;avatarFits[id]=defaultFitFor(cat)}
@@ -1404,4 +1454,4 @@ async function aiCutout(){
   finally{btn.disabled=false;btn.textContent='🤖 KI freistellen (kostenlos)';}
 }
 init();switchWardrobeTab('wardrobe',{scroll:false});
-</script><script src="./photo-tryon.js"></script><script src="./avatar-profile.js"></script><script src="./avatar-v2.js"></script><script src="./avatar-rig-v3.js"></script></body></html>
+</script><script src="./photo-tryon.js"></script><script src="./avatar-profile.js"></script><script src="./avatar-v2.js"></script><script src="./avatar-rig-v3.js"></script><script src="./batch-import.js"></script></body></html>
