@@ -169,7 +169,7 @@ function ensureAnatomy(person){
 function applyNaturalAnatomy(enabled,person){
  const legacy=person.querySelector('#personaArms'),anatomy=ensureAnatomy(person);
  if(legacy)legacy.style.display=enabled?'none':'';
- if(anatomy)anatomy.style.display=enabled?'':'none';
+ if(anatomy){anatomy.style.display=enabled?'':'none';anatomy.removeAttribute('transform');}
  const portraitScale='translate(90 50) scale(.94 .94) translate(-90 -50)';
  for(const id of portraitIds){
   const element=person.querySelector('#'+id);
@@ -247,6 +247,15 @@ function renderNaturalCutoutV4(item,category,svg){
  image.setAttribute('preserveAspectRatio','xMidYMid meet');
  image.setAttribute('aria-hidden','true');
  group.append(image);svg.append(group);
+ if(category==='top'||category==='outerwear'){
+  // Sleeve width from the actual cutout sets the forearm spacing.
+  // Constrain the adjustment: the body keeps its identity for every item.
+  const anatomy=document.getElementById('figure')?.querySelector('#personaAnatomyV4');
+  if(anatomy){
+   const spread=Math.max(.94,Math.min(1.095,width/126));
+   anatomy.setAttribute('transform','translate(90 0) scale('+spread.toFixed(3)+' 1) translate(-90 0)');
+  }
+ }
  return true;
 }
 window.setNaturalAvatarGeometryV4=setNaturalAvatarGeometryV4;
