@@ -1,0 +1,27 @@
+name: VITHU WARDROBE Regression Gates
+on:
+  push:
+    branches:
+      - feat/avatar-v5-joint-rig-safe-prototype-20261105
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'avatar-*.js'
+      - 'garment-ai-worker*.js'
+      - 'photo-tryon.js'
+      - 'tests/**'
+      - '.github/workflows/wardrobe-regression.yml'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Keep V4 and multi-photo import working
+        run: node tests/v4-stability.mjs
+      - name: New body rig and safe fallback
+        run: node tests/v5-body-rig.mjs
