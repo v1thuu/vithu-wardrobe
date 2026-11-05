@@ -48,10 +48,12 @@ function buildReview(){
    'Die KI hat hier keinen brauchbaren Vorschlag geliefert. Du kannst manuell zuschneiden oder das Foto überspringen.';
   const controls=document.createElement('div');controls.className='btnrow';
   controls.append(button('Nächstes Foto','',skipCurrent));
-  controls.append(button('✏ Manuell ausschneiden','secondary',()=>{
+  const manual=button('✏ Manuell ausschneiden','secondary',()=>{
    showManualTools();$('cropbox').style.display='block';
-   $('batchNotice').textContent='Manuell bearbeiten und speichern. Anschliessend „Nächstes Foto“ wählen.';
-  }));
+   $('smartImportStatus').textContent='Foto manuell zuschneiden und speichern; danach „Nächstes Foto“ wählen.';
+  });
+  manual.disabled=!sourceImg;
+  controls.append(manual);
   panel.append(title,note,controls);grid.append(panel);
   $('smartImportStatus').style.display='block';
   $('smartImportStatus').textContent='Foto '+(batch.current+1)+' von '+batch.files.length+' · kein offener KI-Vorschlag';
@@ -112,6 +114,7 @@ async function nextPhoto(){
   finish();return;
  }
  const file=current.files[current.current];
+ sourceImg=null;crop=null;
  current.fileName=file.name||'Foto';
  current.files[current.current]=null; // discard file reference after this image was queued for decoding
  smartSuggestions=[];clearFashionComparison();
@@ -135,7 +138,8 @@ async function nextPhoto(){
 function skipCurrent(){
  if(!isActive()||batch.processing)return;
  if(smartSuggestions.length&&!confirm('Verbleibende Vorschläge dieses Fotos verwerfen und fortfahren?'))return;
- batch.skipped+=smartSuggestions.length||batch.currentHasSuggestions||batch.manualSavedThisPhoto?0:1;
+ if(smartSuggestions.length)batch.discarded+=smartSuggestions.length;
+ else if(!batch.currentHasSuggestions&&!batch.manualSavedThisPhoto)batch.skipped++;
  smartSuggestions=[];renderSmartSuggestions();
  nextPhoto().catch(error=>console.error('Next batch photo',error));
 }
