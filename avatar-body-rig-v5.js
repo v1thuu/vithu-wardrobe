@@ -147,8 +147,8 @@ function update(garments={}){
  if(!active)return false;
  const outer=garments.outerwear||garments.top;
  const category=garments.outerwear?'outerwear':'top';
- const placement=outer?window.getNaturalCutoutPlacementV4?.(outer,category):null;
- const sleeveFit=outer&&category==='top'?window.getNaturalSleeveFitV4?.(outer,category):null;
+ const placement=outer?(getAdaptiveCutoutPlacementV5(outer,category)||window.getNaturalCutoutPlacementV4?.(outer,category)):null;
+ const sleeveFit=outer&&category==='top'?window.getNaturalSleeveFitV4?.(outer,category,placement):null;
  const geometry=calculateRig(placement,avatarProfile?.build,sleeveFit);
  drawRig(person,geometry);
  return true;
@@ -161,8 +161,9 @@ function setMode(value){
   persist().catch(e=>console.error('Körper-Rig konnte nicht gespeichert werden',e));
  }
 }
+window.getAdaptiveCutoutPlacementV5=getAdaptiveCutoutPlacementV5;
 window.updateWardrobeBodyRigV5=update;
 window.setAvatarBodyRigMode=setMode;
-window.__vithuBodyV5Test={calculateRig,drawRig};
+window.__vithuBodyV5Test={calculateRig,drawRig,mapGarmentFitV5,getAdaptiveCutoutPlacementV5};
 window.renderAvatarV2?.(); // First visual render after the new module is available.
 })();
