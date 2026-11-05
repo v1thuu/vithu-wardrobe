@@ -250,6 +250,22 @@
 #smartImportBox.batch-active #smartImportGrid{grid-template-columns:minmax(0,1fr)}
 #smartImportBox.batch-active .smart-card{max-width:550px;margin:0 auto;width:100%}
 #smartImportBox.batch-active .smart-review-folder{display:none}
+
+.batch-review-overlay{position:fixed;inset:0;z-index:5000;background:#06090cdd;display:flex;align-items:center;justify-content:center;padding:12px;overscroll-behavior:contain}
+.batch-review-overlay[hidden]{display:none!important}
+.batch-review-window{background:#1c2025;border:1px solid #53625d;border-radius:20px;width:min(100%,550px);max-height:calc(100dvh - 32px);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;box-shadow:0 18px 70px #000a}
+.batch-review-modal-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.batch-review-modal-head strong{font-size:19px;color:#b5f7a7}
+.batch-review-modal-head button{font-size:12px;padding:10px 12px}
+.batch-review-photo{font-size:12px;color:#bac5c1;margin:10px 0}
+.batch-review-note{font-size:12px;color:#aeb9b4;margin:12px 0 0}
+.batch-review-window #smartImportGrid{display:block}
+.batch-review-window #smartImportGrid>.smart-card{width:100%;margin:0}
+.batch-review-window .smart-card .btnrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px!important}
+.batch-review-window .smart-card .btnrow button{width:100%;padding:10px 5px;font-size:11px}
+.batch-review-window .smart-card>img{max-height:50dvh;object-fit:contain}
+.review-save-overlay{z-index:5500!important}
+@media(max-width:480px){.batch-review-window{padding:12px}.batch-review-window #smartImportGrid>.smart-card{display:block}.batch-review-window .smart-card>img{width:100%;max-height:41dvh}.batch-review-window .smart-card .details{padding:10px}}
 </style></head><body>
 <header class="wardrobe-header"><h1>VITHU <span>WARDROBE</span></h1><details class="app-settings"><summary>⚙</summary><div class="btnrow"><button class="secondary" onclick="exportBackup()">↓ Backup</button><label class="filebutton secondary">↑ Backup laden<input type="file" accept="application/json,.json" onchange="importBackup(event)"></label></div><small>Deine Kleidung wird lokal auf diesem Gerät gespeichert.</small></details></header>
 <nav class="wardrobe-tabs" role="tablist" aria-label="Hauptnavigation"><button id="tab-wardrobe" role="tab" aria-selected="true" class="active" onclick="switchWardrobeTab('wardrobe')">👕 Garderobe</button><button id="tab-add" role="tab" aria-selected="false" class="secondary" onclick="switchWardrobeTab('add')">＋ Hinzufügen</button><button id="tab-avatar" role="tab" aria-selected="false" class="secondary" onclick="switchWardrobeTab('avatar')">◉ Avatar</button></nav>
@@ -259,6 +275,14 @@
 <details class="closet-extras"><summary>Hilfe &amp; Einstellungen</summary><p class="muted">Die Bilder werden auf deinem Gerät verarbeitet. Beim ersten KI-Import kann ein Modelldownload nötig sein.</p><div class="btnrow closet-retry"><button class="secondary" id="smartImportBtn" onclick="retrySmartRoute()">↻ Erneut analysieren</button></div></details>
 <div class="cropbox" id="smartImportBox"><div id="batchReviewBar" class="batch-review-bar" hidden aria-live="polite"><div class="batch-review-head"><strong id="batchReviewTitle">Mehrfach-Import</strong><span id="batchReviewCount"></span></div><div class="batch-review-track"><div id="batchReviewProgress"></div></div><div class="batch-review-actions"><button class="secondary" id="batchSkipBtn" type="button" onclick="batchSkipCurrent()">Foto überspringen</button><button class="secondary" type="button" onclick="batchCancel()">Beenden</button></div></div><p id="smartImportStatus' class="notice" style="display:none"></p><div class="grid" id="smartImportGrid"></div>
 <div class="btnrow"><button id="saveAllSuggestions" class="secondary" onclick="saveAllSuggestions()">✓ Geeignete Teile speichern</button></div></div>
+<div id="batchReviewDialog" class="batch-review-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="batchReviewHeading">
+ <section class="batch-review-window">
+  <div class="batch-review-modal-head"><div><strong id="batchReviewHeading">Kleidung prüfen</strong><div id="batchReviewPosition" class="muted"></div></div><button type="button" class="secondary" onclick="batchCancel()">Beenden</button></div>
+  <p class="batch-review-photo" id="batchReviewFile"></p>
+  <div id="batchReviewHolder"></div>
+  <p class="batch-review-note">Speichern, Korrigieren oder Verwerfen – danach kommt automatisch das nächste Teil.</p>
+ </section>
+</div>
 <details class="closet-extras" id="closetAdvancedOptions"><summary>Erweiterte Optionen</summary><details class="closet-extras"><summary>Weitere Werkzeuge</summary><details class="model-lab"><summary>KI-Ergebnisse vergleichen</summary><p>Optionaler FASHN-Test (ca. 67 MB, nicht-kommerzielle Lizenz).</p><button class="secondary" id="fashnCompareButton" onclick="compareFashionParser()">Modelle vergleichen</button><div id="fashionComparison" hidden aria-live="polite"></div></details><details class="quality-benchmark"><summary>KI-Laufzeiten</summary><div id="qualityBenchBody"><p>Noch keine Analyse.</p></div></details></details><details class="closet-advanced" id="manualTools"><summary>✏️ Manuell korrigieren</summary><div class="cropbox" id="cropbox">
 <p id="cropstatus" class="notice" style="display:none"></p>
 <details class="closet-extras"><summary>Rahmen-Hilfe</summary><p class="muted crophelp">Rahmen mit dem Finger aufziehen, verschieben oder an den Ecken anpassen. Danach das Teil speichern.</p></details>
@@ -350,7 +374,7 @@ async function init(){
    const byId=new Map((all||[]).map(it=>[it.id,it]));items=(meta.itemOrder||[]).map(id=>{const it=byId.get(id);byId.delete(id);return it}).filter(Boolean).concat([...byId.values()]);looks=meta.looks||[];chosen=meta.chosen||{};personPhoto=meta.personPhoto||'';avatarFits=meta.avatarFits||{};photoPose=meta.photoPose||null;photoFits=meta.photoFits||{};avatarProfile={...DEFAULT_AVATAR_PROFILE,...(meta.avatarProfile||{})};avatarRenderMode=meta.avatarRenderMode==='original'?'original':'stylized';avatarMorphMode=meta.avatarMorphMode==='classic'?'classic':'adaptive';
   }else{
    let prior=legacy||{};
-   if(!legacy){prior={}} // Isolated batch preview no shared legacy migration.
+   if(!legacy){prior={}} // Preview keeps isolated storage.
    await migrateLegacyStorage(prior);
    items=Array.isArray(prior.items)?prior.items:[];looks=prior.looks||[];chosen=prior.chosen||{};personPhoto=prior.personPhoto||'';avatarFits=prior.avatarFits||{};photoPose=prior.photoPose||null;photoFits=prior.photoFits||{};avatarProfile={...DEFAULT_AVATAR_PROFILE,...(prior.avatarProfile||{})};avatarRenderMode=prior.avatarRenderMode==='original'?'original':'stylized';avatarMorphMode=prior.avatarMorphMode==='classic'?'classic':'adaptive';
   }
@@ -420,73 +444,154 @@ async function retrySmartRoute(){
 
 // One photo is analysed at a time using the existing SegFormer/FASHN hybrid router.
 // Candidate images are reviewed one by one; only explicitly approved ones are persisted.
-const batchImport={active:false,files:[],index:-1,busy:false,saved:0,discarded:0,run:0};
+// Batch scans every image sequentially, then opens a single review dialog.
+// No parallel WASM models. Only explicitly approved garments reach IndexedDB.
+const batchImport={active:false,phase:'idle',files:[],index:-1,busy:false,saved:0,discarded:0,run:0,
+ skipRequested:false,slow:false,modelStep:0,review:[],reviewTotal:0,reviewed:0,correcting:false,errors:[]};
+function batchRestoreGrid(){
+ const grid=$('smartImportGrid'),box=$('smartImportBox'),all=$('saveAllSuggestions');
+ if(grid&&box&&grid.parentElement!==box)box.insertBefore(grid,all?.parentElement||null);
+}
 function batchUpdate(){
  const bar=$('batchReviewBar');if(!bar)return;
- bar.hidden=!batchImport.active;
- $('smartImportBox').classList.toggle('batch-active',batchImport.active);
- if(!batchImport.active)return;
+ const scan=batchImport.active&&batchImport.phase==='scan';
+ bar.hidden=!scan;
+ $('smartImportBox').classList.toggle('batch-active',scan);
+ if(!scan)return;
  const total=batchImport.files.length;
- $('batchReviewTitle').textContent=batchImport.busy?'Foto wird analysiert …':smartSuggestions.length?'Kleidungsstück prüfen':'Foto geprüft';
- $('batchReviewCount').textContent=(batchImport.index+1)+' / '+total+' Fotos';
- $('batchReviewProgress').style.width=Math.round(100*(batchImport.index+1)/Math.max(total,1))+'%';
- $('batchSkipBtn').disabled=batchImport.busy;
- $('batchSkipBtn').textContent=smartSuggestions.length?'Foto überspringen':'Nächstes Foto';
+ $('batchReviewTitle').textContent=batchImport.skipRequested?'Foto wird übersprungen …':
+  batchImport.slow?'KI braucht ungewöhnlich lange …':'Fotos werden freigestellt …';
+ $('batchReviewCount').textContent=(batchImport.index+1)+' / '+total+' · '+(batchImport.modelStep===1?'B4':batchImport.modelStep===2?'Fertig':'B2');
+ $('batchReviewProgress').style.width=Math.min(100,Math.round(100*(batchImport.index+batchImport.modelStep/2)/Math.max(total,1)))+'%';
+ $('batchSkipBtn').disabled=!!batchImport.skipRequested;
+ $('batchSkipBtn').textContent=batchImport.busy?'Nach Analyse überspringen':'Foto überspringen';
+ $('saveAllSuggestions').style.display='none';
 }
 function batchClear(){
- batchImport.active=false;batchImport.files=[];batchImport.index=-1;batchImport.busy=false;batchImport.run++;
+ batchRestoreGrid();
+ const dialog=$('batchReviewDialog');if(dialog)dialog.hidden=true;
+ batchImport.active=false;batchImport.phase='idle';batchImport.files=[];batchImport.review=[];
+ batchImport.index=-1;batchImport.busy=false;batchImport.skipRequested=false;batchImport.slow=false;
+ batchImport.modelStep=0;batchImport.reviewTotal=0;batchImport.reviewed=0;batchImport.correcting=false;
+ batchImport.run++;
  batchUpdate();
 }
 async function batchCancel(){
  if(!batchImport.active)return;
- if(batchImport.busy)return toast('Analyse läuft – danach beenden');
- if(smartSuggestions.length&&!confirm('Mehrfach-Import beenden? Die noch nicht gespeicherten Vorschläge dieses Fotos werden verworfen.'))return;
- batchClear();smartSuggestions=[];renderSmartSuggestions();
+ if((batchImport.phase==='review'||batchImport.review.length||smartSuggestions.length)&&
+  !confirm('Import beenden? Noch nicht gespeicherte Kleidungsstücke werden verworfen.'))return;
+ ++importSerial;batchClear();smartSuggestions=[];renderSmartSuggestions();
  $('smartImportStatus').style.display='block';
- $('smartImportStatus').textContent='Mehrfach-Import beendet. Bereits gespeicherte Kleidungsstücke bleiben erhalten.';
+ $('smartImportStatus').textContent='Import beendet. Bereits gespeicherte Kleidung bleibt erhalten.';
 }
 async function batchSkipCurrent(){
- if(!batchImport.active||batchImport.busy)return;
- if(smartSuggestions.length&&!confirm('Restliche Vorschläge dieses Fotos verwerfen und mit dem nächsten Foto fortfahren?'))return;
- batchImport.discarded+=smartSuggestions.length;
- smartSuggestions=[];renderSmartSuggestions();await batchNextPhoto();
+ if(!batchImport.active||batchImport.phase!=='scan')return;
+ if(batchImport.busy){batchImport.skipRequested=true;batchUpdate();return;}
+ batchImport.discarded+=smartSuggestions.length;smartSuggestions=[];renderSmartSuggestions();
+ await batchNextPhoto();
+}
+function batchReviewStatus(){
+ if(!batchImport.active||batchImport.phase!=='review')return;
+ const c=smartSuggestions[0];
+ $('batchReviewPosition').textContent='Teil '+(batchImport.reviewed+1)+' von '+batchImport.reviewTotal;
+ $('batchReviewFile').textContent=c?'Aus Foto '+c.batchPhotoNumber+': '+c.batchPhotoName:'';
+}
+function batchReviewNext(){
+ if(!batchImport.active||batchImport.phase!=='review')return;
+ const next=batchImport.review.shift();
+ if(!next){
+  const saved=batchImport.saved,missing=batchImport.errors.length,discarded=batchImport.discarded;
+  batchClear();
+  smartSuggestions=[];renderSmartSuggestions();
+  $('smartImportBox').style.display='block';$('smartImportStatus').style.display='block';
+  $('smartImportStatus').textContent='✓ Prüfung abgeschlossen · '+saved+' gespeichert, '+discarded+
+   ' verworfen'+(missing?', '+missing+' Fotos ohne Ergebnis':'')+'.';
+  toast('Mehrfach-Import abgeschlossen');
+  return;
+ }
+ smartSuggestions=[next];
+ const dialog=$('batchReviewDialog'),holder=$('batchReviewHolder');
+ holder.appendChild($('smartImportGrid'));
+ dialog.hidden=false;
+ batchReviewStatus();renderSmartSuggestions();
+}
+function batchStartReview(){
+ batchImport.phase='review';batchImport.files=[];batchImport.busy=false;batchImport.slow=false;
+ batchImport.reviewTotal=batchImport.review.length;
+ sourceImg=null;clearFashionComparison();
+ if(!batchImport.reviewTotal){
+  const failures=batchImport.errors.length;
+  batchClear();smartSuggestions=[];renderSmartSuggestions();
+  $('smartImportBox').style.display='block';$('smartImportStatus').style.display='block';
+  $('smartImportStatus').textContent='Keine Kleidungsstücke erkannt'+(failures?' · '+failures+' Fotos ohne Ergebnis':'')+
+   '. Probiere andere Fotos oder korrigiere einzeln.';
+  return;
+ }
+ batchReviewNext();
 }
 async function batchNextPhoto(){
- if(!batchImport.active||batchImport.busy)return;
- if(batchImport.index+1>=batchImport.files.length){
-  const count=batchImport.saved;
-  batchClear();
-  $('smartImportBox').style.display='block';
-  $('smartImportStatus').style.display='block';
-  $('smartImportStatus').textContent='✓ Alle Fotos geprüft · '+count+' Kleidungsstück'+(count===1?'':'e')+' gespeichert. Du kannst weitere Fotos auswählen.';
-  toast('Mehrfach-Import abgeschlossen');return;
- }
+ if(!batchImport.active||batchImport.phase!=='scan'||batchImport.busy)return;
+ if(batchImport.index+1>=batchImport.files.length){batchStartReview();return;}
  batchImport.index++;
  const file=batchImport.files[batchImport.index],run=batchImport.run;
- batchImport.busy=true;batchUpdate();
- await onPhoto({target:{files:[file]}},true);
- if(!batchImport.active||run!==batchImport.run)return;
- batchImport.busy=false;
+ batchImport.busy=true;batchImport.skipRequested=false;batchImport.slow=false;batchImport.modelStep=0;
  batchUpdate();
- if(!smartSuggestions.length){
-  $('smartImportBox').style.display='block';
-  $('smartImportStatus').style.display='block';
-  $('smartImportStatus').textContent='Keine sicheren Vorschläge in diesem Foto. Du kannst es korrigieren oder das nächste Foto öffnen.';
+ const slowTimer=setTimeout(()=>{
+  if(batchImport.active&&batchImport.busy&&run===batchImport.run){
+   batchImport.slow=true;batchUpdate();
+   $('smartImportStatus').textContent='Diese Analyse dauert ungewöhnlich lange. B2/B4 arbeiten lokal auf dem iPhone. Ein laufendes KI-Modell lässt sich hier nicht sofort stoppen.';
+  }
+ },65000);
+ try{await onPhoto({target:{files:[file]}},true);}
+ catch(err){console.error('Batch photo failed',err);
+  $('smartImportStatus').textContent='⚠ Foto konnte nicht analysiert werden: '+(err?.message||'Fehler');
  }
+ finally{clearTimeout(slowTimer);}
+ if(!batchImport.active||run!==batchImport.run)return;
+ batchImport.busy=false;batchImport.modelStep=2;
+ const accepted=smartSuggestions.splice(0);
+ if(batchImport.skipRequested)batchImport.discarded+=accepted.length;
+ else{
+  for(const candidate of accepted.slice(0,8)){
+   if(batchImport.review.length>=60){batchImport.errors.push('Speichergrenze: weitere Vorschläge ausgelassen');break;}
+   candidate.batchPhotoNumber=batchImport.index+1;candidate.batchPhotoName=file.name;
+   batchImport.review.push(candidate);
+  }
+  if(!accepted.length)batchImport.errors.push(file.name);
+ }
+ // Free decoded source pixels and File refs before opening the review dialog.
+ batchImport.files[batchImport.index]=null;sourceImg=null;clearFashionComparison();
+ const canvas=$('cropcanvas');canvas.width=1;canvas.height=1;
+ batchImport.skipRequested=false;renderSmartSuggestions();batchUpdate();
+ await new Promise(resolve=>setTimeout(resolve,0));
+ if(batchImport.active&&run===batchImport.run)await batchNextPhoto();
 }
 async function startBatchImport(files){
  const valid=files.filter(f=>f&&f.type&&f.type.startsWith('image/'));
  if(!valid.length)return toast('Bitte Bilder auswählen');
- if(valid.length>20){alert('Bitte maximal 20 Fotos pro Durchgang auswählen, damit das iPhone genügend Arbeitsspeicher hat.');return;}
- batchClear();
- batchImport.files=valid;batchImport.active=true;batchImport.index=-1;batchImport.saved=0;batchImport.discarded=0;
- openImport();batchUpdate();await batchNextPhoto();
+ if(valid.length>10){alert('Bitte maximal 10 Fotos pro Durchgang auswählen. Die zwei KI-Modelle benötigen auf dem iPhone viel Arbeitsspeicher.');return;}
+ ++importSerial; // Invalidate any earlier file analysis before replacing the queue.
+ batchClear();batchImport.files=valid;batchImport.active=true;batchImport.phase='scan';
+ batchImport.index=-1;batchImport.saved=0;batchImport.discarded=0;batchImport.errors=[];
+ openImport();smartSuggestions=[];renderSmartSuggestions();batchUpdate();
+ await batchNextPhoto();
 }
 function batchDecision(saved){
- if(!batchImport.active)return;
+ if(!batchImport.active||batchImport.phase!=='review')return;
  if(saved)batchImport.saved++;else batchImport.discarded++;
- if(smartSuggestions.length){batchUpdate();return;}
- batchNextPhoto().catch(e=>{console.error('Mehrfach-Import: nächstes Foto',e);toast('Nächstes Foto konnte nicht geöffnet werden');});
+ if(smartSuggestions.length){batchReviewStatus();return;}
+ batchImport.reviewed++;
+ batchReviewNext();
+}
+function batchPauseForCorrection(){
+ if(batchImport.active&&batchImport.phase==='review'){
+  batchImport.correcting=true;$('batchReviewDialog').hidden=true;
+ }
+}
+function batchResumeAfterCorrection(){
+ if(!batchImport.active||batchImport.phase!=='review'||!batchImport.correcting)return;
+ batchImport.correcting=false;$('batchReviewDialog').hidden=false;
+ batchReviewStatus();renderSmartSuggestions();
 }
 async function onPhoto(e,fromBatch=false){
  if(!fromBatch){
@@ -507,7 +612,7 @@ async function onPhoto(e,fromBatch=false){
   if(serial!==importSerial)return;
   sourceImg=loadedPhoto;
   $('itemName').value='';crop=null;
-  const c=$('cropcanvas'),r=Math.min(1,850/Math.max(sourceImg.width,sourceImg.height));
+  const c=$('cropcanvas'),r=Math.min(1,(fromBatch?640:850)/Math.max(sourceImg.width,sourceImg.height));
   c.width=Math.max(1,Math.round(sourceImg.width*r));c.height=Math.max(1,Math.round(sourceImg.height*r));
   c.getContext('2d').drawImage(sourceImg,0,0,c.width,c.height);
   $('rect').style.display='none';setCropTool('select');setZoom(1);centerCrop();
@@ -956,13 +1061,20 @@ async function runHybridImport(serial,stats){
   if(serial!==importSerial)return;
  }
  const status=$('smartImportStatus'),kind=chooseHybridKind(stats);
- status.textContent='Kleidung erkennen · 1/2';
+ const inBatch=batchImport.active&&batchImport.phase==='scan';
+ if(inBatch){batchImport.modelStep=0;batchUpdate();}
+ status.textContent=inBatch?'Foto '+(batchImport.index+1)+' · SegFormer B2':'Kleidung erkennen · 1/2';
  const first=await smartImportBeta('legacy',{silent:true});
  if(serial!==importSerial)return;
- status.textContent='Freistellung optimieren · 2/2';
+ if(inBatch){batchImport.modelStep=1;batchUpdate();}
+ status.textContent=inBatch?'Foto '+(batchImport.index+1)+' · FASHN B4':'Freistellung optimieren · 2/2';
  const second=await smartImportBeta('fashn',{silent:true});
  if(serial!==importSerial)return;
- if(!first&&!second){status.textContent='KI nicht verfügbar · Manuell korrigieren';return}
+ if(!first&&!second){
+  status.textContent='⚠ KI nicht verfügbar. Dieses Foto überspringen oder unter „Erweiterte Optionen“ manuell korrigieren.';
+  if(inBatch){$('closetAdvancedOptions').open=true;$('manualTools').open=true;$('cropbox').style.display='block';}
+  return;
+ }
  const height=$('cropcanvas').height;
  smartSuggestions=mergeHybridCandidates(first,second,kind,height);
  if(first&&second)fashionComparison={serial,old:first,alt:second};
@@ -1170,6 +1282,9 @@ function renderSmartSuggestions(){
    discardDirect.onclick=()=>dropSuggestion(i);
    actions.append(refine,discardDirect);
   }else actions.append(save,refine);
+  if(batchImport.active&&batchImport.phase==='review'&&s.grade!=='reject'){
+   const discardBtn=document.createElement('button');discardBtn.className='secondary reject-discard';discardBtn.textContent='Verwerfen';discardBtn.onclick=()=>dropSuggestion(i);actions.append(discardBtn);
+  }
   if(s.source!=='shop-auto'){
    const quality=document.createElement('button');
    quality.className='secondary smart-quality-btn';
@@ -1183,16 +1298,15 @@ function renderSmartSuggestions(){
   const input=document.createElement('input');input.id='sg-name-'+i;input.value=s.name;labelName.append(input);
   const labelCat=document.createElement('label');labelCat.className='f';labelCat.textContent='Kategorie';
   const select=document.createElement('select');select.id='sg-cat-'+i;select.innerHTML=categoryOptions(s.category);labelCat.append(select);
-  const discard=document.createElement('button');discard.className='secondary';discard.textContent='Verwerfen';discard.onclick=()=>dropSuggestion(i);if(s.grade==='reject')discard.hidden=true;
+  const discard=document.createElement('button');discard.className='secondary';discard.textContent='Verwerfen';discard.onclick=()=>dropSuggestion(i);if(s.grade==='reject'||(batchImport.active&&batchImport.phase==='review'))discard.hidden=true;
   if(s.source==='shop-auto'){more.append(summary,labelName,discard);d.append(name,hint,labelCat,actions,more)}
   else{more.append(summary,labelName,labelCat,discard,el._qualityButton);d.append(more)}
   el.append(img,d);parent.append(el);
  };
  if(batchImport.active){
   $('saveAllSuggestions').style.display='none';
-  if(smartSuggestions.length)section(grid,smartSuggestions[0],0);
-  batchUpdate();
-  return;
+  if(batchImport.phase==='review'&&smartSuggestions.length)section(grid,smartSuggestions[0],0);
+  batchUpdate();return;
  }
  smartSuggestions.forEach((s,i)=>{if(s.grade==='ready')section(grid,s,i)});
  if(questionable.length){
@@ -1213,6 +1327,7 @@ function renderSmartSuggestions(){
  switchWardrobeTab('add',{scroll:false});$('closetAdvancedOptions').open=true;
  const s=smartSuggestions[i];if(!s)return;
  for(let j=0;j<smartSuggestions.length;j++){const cur=smartSuggestions[j];cur.name=$('sg-name-'+j)?.value.trim()||cur.name;cur.category=$('sg-cat-'+j)?.value||cur.category}
+ batchPauseForCorrection();
  try{
   const maskImage=new Image();maskImage.src=s.image;await maskImage.decode();
   const baseImage=new Image();baseImage.src=s.originalCrop||s.image;await baseImage.decode();
@@ -1229,7 +1344,7 @@ function renderSmartSuggestions(){
   $('cutoutSaveButton').textContent='✓ Übernehmen';
   $('cutoutCancelButton').textContent='Abbrechen';
   $('cutoutPanel').scrollIntoView({behavior:'smooth',block:'start'});
- }catch(e){alert('Vorschlag konnte nicht geöffnet werden: '+e.message)}
+ }catch(e){batchResumeAfterCorrection();alert('Vorschlag konnte nicht geöffnet werden: '+e.message)}
 }
 let reviewSaveResolver=null,reviewSaveTarget=-1;
 function requestReviewSave(index){
@@ -1410,7 +1525,7 @@ let cutOriginal=null,cutData=null,cutHistory=[],cutTool='region',cutDrag=false,c
 function cutMode(tool){cutTool=tool;[['region','eraseRegion'],['erase','eraseBrush'],['restore','restoreBrush']].forEach(([k,id])=>$(id).className=k===tool?'active':'secondary');$('cutoutStatus').textContent=tool==='region'?'Auf einen zusammenhängenden Hintergrundbereich tippen.':tool==='erase'?'Mit dem Finger störende Reste wegradieren.':'Mit dem Finger versehentlich entfernte Bereiche wiederherstellen.'}
 function drawCut(){if(!cutData)return;const c=$('cutoutCanvas');c.getContext('2d').putImageData(cutData,0,0)}
 function openCutout(){$('closetAdvancedOptions').open=true;refineSuggestionId=null;$('cutoutSaveButton').textContent='✓ Übernehmen';$('cutoutCancelButton').textContent='Abbrechen';if(!sourceImg)return toast('Bitte Foto auswählen');if(mode==='worn'&&(!crop||crop.w<12||crop.h<12))return alert('Zuerst den grünen Rahmen um das Kleidungsstück ziehen.');const src=$('cropcanvas'),canvas=$('cutoutCanvas');let x=0,y=0,w=src.width,h=src.height;if(mode==='worn'){x=crop.x;y=crop.y;w=crop.w;h=crop.h}const factor=Math.min(1,640/Math.max(w,h));canvas.width=Math.max(1,Math.round(w*factor));canvas.height=Math.max(1,Math.round(h*factor));const ctx=canvas.getContext('2d',{willReadFrequently:true});if(mode==='worn')ctx.drawImage(src,x,y,w,h,0,0,canvas.width,canvas.height);else ctx.drawImage(sourceImg,0,0,canvas.width,canvas.height);cutOriginal=ctx.getImageData(0,0,canvas.width,canvas.height);cutData=ctx.getImageData(0,0,canvas.width,canvas.height);cutHistory=[];cutMode('region');drawCut();$('cutoutStatus').textContent='Du kannst manuell freistellen oder „KI freistellen (kostenlos)“ testen. Danach bei Bedarf mit Restpixel säubern nacharbeiten.';$('cutoutPanel').style.display='block';$('cutoutPanel').scrollIntoView({block:'start',behavior:'smooth'})}
-function closeCutout(){refineSuggestionId=null;$('cutoutSaveButton').textContent='✓ Übernehmen';$('cutoutCancelButton').textContent='Abbrechen';$('cutoutPanel').style.display='none';cutData=null;cutOriginal=null;cutHistory=[]}
+function closeCutout(){batchResumeAfterCorrection();refineSuggestionId=null;$('cutoutSaveButton').textContent='✓ Übernehmen';$('cutoutCancelButton').textContent='Abbrechen';$('cutoutPanel').style.display='none';cutData=null;cutOriginal=null;cutHistory=[]}
 function cutSnapshot(){if(!cutData)return;cutHistory.push(new Uint8ClampedArray(cutData.data));if(cutHistory.length>18)cutHistory.shift()}
 function cutUndo(){if(!cutHistory.length)return toast('Keine Änderung zum Rückgängigmachen');cutData.data.set(cutHistory.pop());drawCut()}
 function cutReset(){if(!cutOriginal)return;cutSnapshot();cutData.data.set(cutOriginal.data);drawCut();$('cutoutStatus').textContent='Auf Original zurückgesetzt.'}
@@ -1442,7 +1557,7 @@ function cutEdgePolish(){if(!cutData)return;cutSnapshot();
 function cutAutoClean(){if(!cutData)return; cutSnapshot(); const main=cutKeepMainComponents(); const filled=cutFillSmallHoles(); const feathered=cutFeatherEdges(); drawCut(); $('cutoutStatus').textContent=`Auto gesäubert: ${main.removed.toLocaleString('de-CH')} Restpixel entfernt, ${filled.toLocaleString('de-CH')} kleine Löcher gefüllt, ${feathered.toLocaleString('de-CH')} Kanten geglättet.`;}
 const cutC=$('cutoutCanvas');cutC.addEventListener('pointerdown',e=>{if(!cutData)return;e.preventDefault();cutC.setPointerCapture(e.pointerId);const p=cutPos(e);cutSnapshot();if(cutTool==='region'){cutFlood(p.x,p.y);drawCut()}else{cutDrag=true;cutLast=p;cutPaint(p.x,p.y);drawCut()}});cutC.addEventListener('pointermove',e=>{if(!cutDrag||!cutData)return;e.preventDefault();const p=cutPos(e);cutStroke(cutLast,p);cutLast=p;drawCut()});cutC.addEventListener('pointerup',()=>{cutDrag=false;cutLast=null});cutC.addEventListener('pointercancel',()=>{cutDrag=false;cutLast=null});
 function trimAlphaCanvas(src){const w=src.width,h=src.height,d=src.getContext('2d').getImageData(0,0,w,h).data;let left=w,top=h,right=-1,bottom=-1;for(let y=0;y<h;y++)for(let x=0;x<w;x++){if(d[(y*w+x)*4+3]>12){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}}if(right<left)return src;const pad=2;left=Math.max(0,left-pad);top=Math.max(0,top-pad);right=Math.min(w-1,right+pad);bottom=Math.min(h-1,bottom+pad);const out=document.createElement('canvas');out.width=right-left+1;out.height=bottom-top+1;out.getContext('2d').drawImage(src,left,top,out.width,out.height,0,0,out.width,out.height);return out;}
-async function saveCutout(){if(!cutData)return;const trimmed=trimAlphaCanvas($('cutoutCanvas'));const image=trimmed.toDataURL('image/png');if(refineSuggestionId){const s=smartSuggestions.find(x=>x.id===refineSuggestionId);if(!s){closeCutout();return toast('Vorschlag nicht mehr vorhanden')}s.image=image;s.hybridInvalid=false;s.hybridReview=true;s.hybridReason='Manuell korrigiert – bitte prüfen';s.reviewNeeded=true;s.quality=undefined;closeCutout();renderSmartSuggestions();$('smartImportBox').style.display='block';$('smartImportStatus').style.display='block';$('smartImportStatus').textContent='✅ Vorschlag verbessert. Überprüfe die Vorschau und speichere erst dann.';$('smartImportBox').scrollIntoView({behavior:'smooth',block:'start'});toast('Korrektur übernommen');return}await addItem(image)}
+async function saveCutout(){if(!cutData)return;const trimmed=trimAlphaCanvas($('cutoutCanvas'));const image=trimmed.toDataURL('image/png');if(refineSuggestionId){const s=smartSuggestions.find(x=>x.id===refineSuggestionId);if(!s){closeCutout();return toast('Vorschlag nicht mehr vorhanden')}s.image=image;s.hybridInvalid=false;s.hybridReview=true;s.hybridReason='Manuell korrigiert – bitte prüfen';s.reviewNeeded=true;s.quality=undefined;closeCutout();renderSmartSuggestions();$('smartImportBox').style.display='block';$('smartImportStatus').style.display='block';$('smartImportStatus').textContent='✅ Vorschlag verbessert. Überprüfe die Vorschau und speichere erst dann.';if(!(batchImport.active&&batchImport.phase==='review'))$('smartImportBox').scrollIntoView({behavior:'smooth',block:'start'});toast('Korrektur übernommen');return}await addItem(image)}
 
 // MediaPipe SelfieMulticlass: 0 background, 1 hair, 2 body skin, 3 face skin, 4 clothing, 5 accessories.
 let aiSegmenter=null, aiLoading=null;
