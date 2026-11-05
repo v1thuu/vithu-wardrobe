@@ -88,8 +88,8 @@ assert.ok(!/NaN|Infinity/.test(armShape+handShape),'no invalid SVG paths');
 assert.ok((handShape.match(/[CQ]/g)||[]).length<=7,
  'hand is a single calm shape, not a cluster of separate fingertips');
 assert.ok((armShape.match(/C/g)||[]).length>=8,'both arm sides use cubic splines');
-const upper=b=>compute(null,b);
-const lean=upper('lean'),athletic=upper('athletic'),broad=upper('broad');
+const geometryForBuild=b=>compute(null,b);
+const lean=geometryForBuild('lean'),athletic=geometryForBuild('athletic'),broad=geometryForBuild('broad');
 for(const radius of ['sleeve','upperArm','elbow','forearm','wrist']){
  assert.ok(lean.radii[radius]<athletic.radii[radius]&&athletic.radii[radius]<broad.radii[radius],
   'build scales anatomical radius '+radius);
