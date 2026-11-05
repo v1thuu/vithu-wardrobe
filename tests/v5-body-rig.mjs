@@ -84,10 +84,41 @@ assert.ok(narrow.wristX>narrow.elbowX+4&&loose.wristX>loose.elbowX+4,
 const armShape=group.children[0].children[0].attrs.d;
 const handShape=group.children[0].children[1].attrs.d;
 assert.ok(!/NaN|Infinity/.test(armShape+handShape),'no invalid SVG paths');
-assert.ok((handShape.match(/Q/g)||[]).length>=7,'hand has subtle individual fingertip contours');
+// Smooth palm and one small thumb: the old Q-count rewarded jagged cartoon fingers.
+assert.ok((handShape.match(/[CQ]/g)||[]).length<=7,
+ 'hand is a single calm shape, not a cluster of separate fingertips');
+assert.ok((armShape.match(/C/g)||[]).length>=8,'both arm sides use cubic splines');
+const upper=b=>compute(null,b);
+const lean=upper('lean'),athletic=upper('athletic'),broad=upper('broad');
+for(const radius of ['sleeve','upperArm','elbow','forearm','wrist']){
+ assert.ok(lean.radii[radius]<athletic.radii[radius]&&athletic.radii[radius]<broad.radii[radius],
+  'build scales anatomical radius '+radius);
+}
+for(const g of [lean,athletic,broad,narrow,loose]){
+ assert.ok(g.radii.upperArm>g.radii.elbow&&g.radii.elbow>g.radii.forearm
+  &&g.radii.forearm>g.radii.wrist,'forearm tapers continuously');
+ const a=g.joints.shoulder,b=g.joints.elbow,c=g.joints.wrist;
+ const cross=(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+ assert.ok(Math.abs(cross)>200,'elbow is anatomically noncollinear');
+ assert.ok(g.handY-g.wristY>=17&&g.handY-g.wristY<=22,'hand stays wrist-proportional');
+ const shape=sandbox.window.__vithuBodyV5Test;
+ assert.doesNotThrow(()=>new vm.Script('"'+shape.createArmOutlineV5(g)+'"'));
+ assert.ok(!/NaN|Infinity|undefined/.test(shape.createArmOutlineV5(g)+shape.createHandOutlineV5(g)),
+  'valid finite SVG path coordinates');
+}
+const shifted=compute({width:145,y:90,height:138},'athletic',{left:28,right:152,y:137});
+for(const name of ['shoulderX','shoulderY','upperArmX','upperArmY',
+ 'elbowX','elbowY','forearmX','forearmY','wristX','wristY','handY']){
+ assert.equal(shifted[name],athletic[name],'shirt may not change skeleton '+name);
+}
+assert.equal(JSON.stringify(shifted.radii),JSON.stringify(athletic.radii),
+ 'shirt may not change anatomy radii');
+assert.notEqual(shifted.sleeveY,athletic.sleeveY,'sleeve opening alone follows shirt');
+
 
 const extreme=compute({width:10000,y:-10000,height:1},'broad');
 assert.ok(extreme.sleeveX>=24&&extreme.sleeveY>=114&&extreme.handY<=238,'large garment values clamped');
+assert.ok(sandbox.window.__vithuBodyV5Test.RIG_LANDMARKS,'named joints publicly testable');
 const count=upper.children.length;
 sandbox.window.setAvatarBodyRigMode('classic');
 assert.equal(sandbox.avatarBodyRigMode,'classic');
