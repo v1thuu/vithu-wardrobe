@@ -490,7 +490,9 @@ async function batchNextPhoto(){
  if(!smartSuggestions.length){
   $('smartImportBox').style.display='block';
   $('smartImportStatus').style.display='block';
-  $('smartImportStatus').textContent='Keine sicheren Vorschläge in diesem Foto. Du kannst es korrigieren oder das nächste Foto öffnen.';
+  const message=$('smartImportStatus').textContent||'';
+  if(!/^(⚠|KI nicht verfügbar|Produkt-Import fehlgeschlagen|Foto konnte nicht)/i.test(message))
+   $('smartImportStatus').textContent='Kein brauchbarer Vorschlag in diesem Foto. Du kannst manuell korrigieren oder das nächste Foto öffnen.';
  }
 }
 async function startBatchImport(files){
@@ -985,7 +987,11 @@ async function runHybridImport(serial,stats){
   second=await smartImportBeta('fashn',{silent:true});
  }
  if(serial!==importSerial)return;
- if(!first&&!second){status.textContent='KI nicht verfügbar · Foto überspringen oder manuell korrigieren';return}
+ if(!first&&!second){
+  status.textContent='⚠ KI nicht verfügbar. Dieses Foto überspringen oder unter „Erweiterte Optionen“ manuell korrigieren.';
+  if(inBatch){$('closetAdvancedOptions').open=true;$('manualTools').open=true;$('cropbox').style.display='block';}
+  return;
+ }
  const height=$('cropcanvas').height;
  smartSuggestions=mergeHybridCandidates(first,second,kind,height);
  if(first&&second)fashionComparison={serial,old:first,alt:second};
