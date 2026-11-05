@@ -152,7 +152,7 @@ function measureOriginalTopMask(pixels,width,height){
  }
  const straightness=waistRatio*.57+hemRatio*.43;
  const fitScore=Math.max(0,Math.min(1,(straightness-.77)/.29));
- const confidence=Math.max(0,Math.min(1,.67+(sleeves?.score>.055?.13:0)+(neckline?.06:0)-centered));
+ const confidence=Math.max(0,Math.min(1,.53+(sleeves?.score>.055?.19:0)+(neckline?.05:0)-centered));
  return {
   shoulderWidth:shoulder.width,chestWidth:chest.width,
   waistWidth:waist.width,hemWidth:hem.width,
