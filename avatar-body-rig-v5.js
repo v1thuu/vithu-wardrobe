@@ -9,6 +9,25 @@ const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
 const round=n=>Number(n.toFixed(2));
 const getFigure=()=>document.getElementById('figure');
 
+
+function mapGarmentFitV5(metrics){
+ const valid=!!metrics&&Number.isFinite(metrics.fitScore)&&Number.isFinite(metrics.confidence)
+  &&metrics.confidence>=.64&&Number.isFinite(metrics.chestWidth)&&metrics.chestWidth>4;
+ const score=valid?clamp(metrics.fitScore,0,1):.5;
+ return {reliable:valid,fitScore:score,fitClass:valid?metrics.fitClass:'regular',
+  garmentScale:valid?clamp(.91+.18*score,.91,1.09):1};
+}
+function getAdaptiveCutoutPlacementV5(item,category='top'){
+ if(!item||category!=='top')return null;
+ const base=window.getNaturalCutoutPlacementV4?.(item,category);
+ if(!base||!base.width)return null;
+ const fit=mapGarmentFitV5(window.getOriginalTopMaskMetricsV5?.(item));
+ if(!fit.reliable)return null;
+ const width=clamp(base.width*fit.garmentScale,base.width*.90,Math.min(154,base.width*1.11));
+ const height=base.height*width/base.width;
+ if(!Number.isFinite(height)||height<=0)return null;
+ return {x:round(90-width/2),y:base.y,width:round(width),height:round(height)};
+}
 function calculateRig(topPlacement,build,sleeveFit=null){
  const width=Number.isFinite(topPlacement?.width)?topPlacement.width:126;
  const y=Number.isFinite(topPlacement?.y)?topPlacement.y:81;
@@ -128,8 +147,8 @@ function update(garments={}){
  if(!active)return false;
  const outer=garments.outerwear||garments.top;
  const category=garments.outerwear?'outerwear':'top';
- const placement=outer?window.getNaturalCutoutPlacementV4?.(outer,category):null;
- const sleeveFit=outer&&category==='top'?window.getNaturalSleeveFitV4?.(outer,category):null;
+ const placement=outer?(getAdaptiveCutoutPlacementV5(outer,category)||window.getNaturalCutoutPlacementV4?.(outer,category)):null;
+ const sleeveFit=outer&&category==='top'?window.getNaturalSleeveFitV4?.(outer,category,placement):null;
  const geometry=calculateRig(placement,avatarProfile?.build,sleeveFit);
  drawRig(person,geometry);
  return true;
@@ -142,8 +161,9 @@ function setMode(value){
   persist().catch(e=>console.error('Körper-Rig konnte nicht gespeichert werden',e));
  }
 }
+window.getAdaptiveCutoutPlacementV5=getAdaptiveCutoutPlacementV5;
 window.updateWardrobeBodyRigV5=update;
 window.setAvatarBodyRigMode=setMode;
-window.__vithuBodyV5Test={calculateRig,drawRig};
+window.__vithuBodyV5Test={calculateRig,drawRig,mapGarmentFitV5,getAdaptiveCutoutPlacementV5};
 window.renderAvatarV2?.(); // First visual render after the new module is available.
 })();
