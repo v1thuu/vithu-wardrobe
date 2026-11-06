@@ -69,7 +69,7 @@ function makeWardrobe(){
  const search=el('input','v7-search');search.id='v7-search';search.type='search';
  search.placeholder='Kleidung durchsuchen';search.setAttribute('aria-label','Garderobe durchsuchen');
  search.addEventListener('input',()=>{state.search=search.value.toLocaleLowerCase('de');renderWardrobe();});
- top.append(search,button('＋ Hinzufügen','v7-action-outline',()=>navigate('import')));
+ top.append(search,button('+ Hinzufügen','v7-action-outline',()=>navigate('import')));
  const bar=el('div','v7-chips');bar.id='v7-wardrobe-categories';
  wardrobeGrid=el('div','v7-wardrobe-grid');wardrobeGrid.id='v7-wardrobe-grid';
  const empty=el('div','v7-empty');
@@ -141,7 +141,7 @@ function makeAvatar(){
 }
 function makeLooks(){
  const {outer,head}=page('Meine Looks','DEINE GESPEICHERTEN OUTFITS');
- head.append(button('＋ Neuer Look','v7-head-cta',()=>navigate('create')));
+ head.append(button('+ Neuer Look','v7-head-cta',()=>navigate('create')));
  const grid=el('div','v7-looks-grid');grid.id='v7-looks-grid';outer.append(grid);
  return outer;
 }
@@ -221,10 +221,12 @@ function itemCard(item){
  const desc=el('div','v7-item-caption');
  desc.append(el('span','',labels[item.category]||'Kleidungsstück'),
  el('strong','',safeText(item.name,labels[item.category]||'Kleidungsstück')));
- const act=button(core().chosen[item.category]===item.id?'✓ Im Look':'＋ Outfit',
-  'v7-additem'+(core().chosen[item.category]===item.id?' is-selected':''),
-  async()=>{await choose(item.category,item.id);updateAll();},
-  item.name+' zum Outfit hinzufügen');
+ const isSelected=core().chosen[item.category]===item.id;
+ const act=button(isSelected?'✓ Im Look':'+ Outfit',
+  'v7-additem'+(isSelected?' is-selected':''),
+  async()=>{await choose(item.category,isSelected?'':item.id);updateAll();},
+  isSelected?item.name+' aus dem Outfit entfernen':item.name+' zum Outfit hinzufügen');
+ act.setAttribute('aria-pressed',String(isSelected));
  article.append(photo,desc,act);return article;
 }
 function renderWardrobe(){
@@ -251,7 +253,7 @@ function renderSlots(){
   if(item)thumb.append(img(item.image,item.name));else thumb.append(el('span','',icon(key)));
   const text=el('div','v7-slot-text');text.append(el('small','',title),
    el('strong','',item?safeText(item.name,title):'Teil hinzufügen'));
-  card.append(thumb,text,el('span','v7-slot-action',item?'↻':'＋'));
+  card.append(thumb,text,el('span','v7-slot-action',item?'↻':'+'));
   card.addEventListener('click',()=>{state.createCategory=key;renderCreatePicker();
    $('v7-create-picker').scrollIntoView({block:'start',behavior:'smooth'});});
   slots.append(card);
