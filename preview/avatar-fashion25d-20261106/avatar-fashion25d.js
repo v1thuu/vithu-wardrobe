@@ -180,8 +180,7 @@ function renderPerson(){
  '</g>'+
  '<g id="fashion25dUpper" transform="'+profileScale+'">'+
  armMarkup()+
- '<path d="M 79 77 Q 89 85 101 77 L 121 82 Q 135 88 141 101 L 133 206 '+
- 'Q 90 215 48 206 L 40 101 Q 47 87 66 82 Z" fill="url(#f25-tee)" opacity=".37"/>'+
+ // No neutral torso may show through or around imported garment cutouts.
  (!wearing('top')&&!wearing('outerwear')?neutralTop():'')+
  '</g>';
  front.innerHTML=gradientDefs(c)+
