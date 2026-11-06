@@ -36,3 +36,19 @@ jobs:
           path: artifacts/v6-fashion-studio/
           retention-days: 30
           if-no-files-found: warn
+      - name: Package deployable V6 Netlify ZIP
+        run: |
+          mkdir -p artifacts/v6-build/site
+          cp -a preview/v6-fashion-studio-20261106/. artifacts/v6-build/site/
+          (cd artifacts/v6-build/site && zip -q -r ../vithu-wardrobe-v6-netlify.zip .)
+          cp artifacts/v6-build/site/index.html artifacts/v6-build/vithu-wardrobe-v6-index.html
+          unzip -t artifacts/v6-build/vithu-wardrobe-v6-netlify.zip | tail -n 1
+      - name: Upload Netlify ZIP and HTML entrypoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: vithu-wardrobe-v6-netlify-and-html
+          path: |
+            artifacts/v6-build/vithu-wardrobe-v6-netlify.zip
+            artifacts/v6-build/vithu-wardrobe-v6-index.html
+          retention-days: 30
+          if-no-files-found: error
