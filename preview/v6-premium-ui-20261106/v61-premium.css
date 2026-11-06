@@ -1,0 +1,229 @@
+/* VITHU WARDROBE V6.1 – premium UI layer
+ * Presentation only. No import/cutout/storage/body-geometry modifications.
+ * Load after v6-ui.css. Original DOM handlers remain authoritative.
+ */
+:root{
+ --v61-bg:#0b0d11;--v61-panel:#15191e;--v61-stroke:#343b43;
+ --v61-accent:#b5f99b;--v61-white:#f6f7f6;--v61-muted:#a4adb7;
+ --v61-shadow:0 22px 58px rgba(0,0,0,.30)
+}
+html{background:var(--v61-bg)}
+body.v6-ready{max-width:1720px;padding:0 clamp(15px,2.2vw,34px) 34px;background:radial-gradient(ellipse at 50% 3%,#26352a4d,transparent 37%),#0b0d11}
+body.v6-ready button:focus-visible,body.v6-ready summary:focus-visible,body.v6-ready select:focus-visible,
+body.v6-ready input:focus-visible{outline:2px solid var(--v61-accent);outline-offset:3px}
+body.v6-ready .v61-masthead{
+ position:sticky;top:0;z-index:95;display:grid;grid-template-columns:minmax(200px,1fr) auto minmax(90px,1fr);
+ align-items:center;gap:18px;min-height:77px;padding:9px clamp(4px,.8vw,12px);
+ border-bottom:1px solid #ffffff13;background:rgba(12,15,19,.94);
+ backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+ box-shadow:0 12px 28px #0002
+}
+body.v6-ready .v61-masthead .wardrobe-header{
+ display:flex;align-items:center;justify-content:flex-start;gap:0;padding:0;margin:0;
+ grid-column:1;grid-row:1
+}
+body.v6-ready .v61-masthead .wardrobe-header h1{
+ font-size:27px!important;margin:0;line-height:.86;font-weight:900;letter-spacing:2.4px;white-space:nowrap;
+ color:#f5f6f5;display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+ text-shadow:0 1px 20px #ffffff10
+}
+body.v6-ready .v61-masthead .wardrobe-header h1 span{
+ font-size:9px;line-height:1;letter-spacing:5.3px;color:#d9dfe2;font-weight:550
+}
+body.v6-ready .v61-masthead .wardrobe-tabs{
+ grid-column:2;grid-row:1;position:static;display:flex;justify-content:center;align-items:center;
+ gap:9px;margin:0;padding:0;border:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none
+}
+body.v6-ready .v61-masthead .wardrobe-tabs button{
+ min-width:142px;min-height:47px;border-radius:14px;padding:11px 15px;letter-spacing:.05px;
+ font-size:13px;color:#d9e0e1;background:linear-gradient(150deg,#282d35,#20252b);
+ border:1px solid #424851;box-shadow:inset 0 1px #ffffff08;outline:0;outline-offset:0
+}
+body.v6-ready .v61-masthead .wardrobe-tabs button.active{
+ color:#122115;background:linear-gradient(125deg,#c1ffab,#aaf495);
+ border-color:#d2ffbd;box-shadow:0 5px 23px #a6fa8122, inset 0 1px #fff5;outline:0
+}
+body.v6-ready .v61-masthead .wardrobe-tabs button:hover:not(.active){border-color:#95c893}
+body.v6-ready .v61-masthead .app-settings{
+ grid-column:3;grid-row:1;justify-self:end;position:relative;z-index:6
+}
+body.v6-ready .v61-masthead .app-settings>summary{
+ list-style:none;display:grid;place-items:center;width:45px;height:45px;cursor:pointer;
+ border:1px solid #3b4249;border-radius:14px;background:#272d34;color:#f1f4f4;font-size:20px;
+ transition:background .15s
+}
+body.v6-ready .v61-masthead .app-settings>summary::-webkit-details-marker{display:none}
+body.v6-ready .v61-masthead .app-settings[open]>summary{background:#3b4841;border-color:#a7e9a1}
+body.v6-ready .v61-masthead .app-settings>div,body.v6-ready .v61-masthead .app-settings>small{
+ position:absolute;right:0;width:min(85vw,290px);padding:12px;border:1px solid #505d5b;
+ border-radius:12px;background:#242b2d;box-shadow:0 12px 34px #0008
+}
+body.v6-ready .v61-masthead .app-settings>div{top:52px}
+body.v6-ready .v61-masthead .app-settings>small{top:121px;font-size:11px}
+body.v6-ready .layout{gap:17px}
+body.v6-ready #avatarPanel{padding-top:14px}
+body.v6-ready .v6-topbar{align-items:flex-end;margin:0 0 19px;gap:14px}
+body.v6-ready .v6-topbar>div:first-child{display:grid;gap:5px}
+body.v6-ready .v6-topbar .v6-tag{
+ width:max-content;display:inline-flex;align-items:center;background:#223629;border-color:#4d704f;
+ color:#bafaab;box-shadow:inset 0 1px #ffffff0a;letter-spacing:1.2px;font-weight:800;
+ padding:6px 11px;border-radius:999px;font-size:10px
+}
+body.v6-ready .v6-topbar h2{font-size:clamp(24px,2.4vw,34px);line-height:1.05;letter-spacing:-1.1px;margin:4px 0 0}
+body.v6-ready .v6-topbar p{font-size:12px;line-height:1.3;color:#aab5bb;margin:0}
+body.v6-ready #avatarFold .v6-view-tabs{background:#1b222a;border:1px solid #3a444c;border-radius:13px}
+body.v6-ready #avatarFold .v6-view-tabs button{min-height:37px;padding:8px 14px;border-radius:9px}
+body.v6-ready #avatarFold .v6-view-tabs button.active{background:var(--v61-accent);color:#1a2b1c}
+body.v6-ready #avatarFold .studio.v6-workspace{
+ grid-template-columns:minmax(220px,260px) minmax(360px,1fr) minmax(270px,330px);
+ gap:15px;align-items:stretch
+}
+body.v6-ready .v6-side,body.v6-ready .v6-right{
+ border:1px solid #303840;border-radius:22px;background:linear-gradient(165deg,#1a1e24,#14191f);
+ box-shadow:var(--v61-shadow);padding:20px
+}
+body.v6-ready .v6-left h3,body.v6-ready .v6-right h3{color:#eff2ef;font-size:13px;letter-spacing:1.5px}
+body.v6-ready .v6-sidebar-section+.v6-sidebar-section{border-top:1px solid #ffffff13}
+body.v6-ready .v6-side-heading{color:#adb6bf;letter-spacing:1.65px;font-size:10px}
+body.v6-ready .v6-left .fashion25d-picker button{
+ position:relative;border:1px solid #3b434b!important;background:linear-gradient(145deg,#282d34,#1e242a)!important;
+ min-height:58px;padding:13px 13px 13px 44px!important;border-radius:13px!important;font-weight:700
+}
+body.v6-ready .v6-left .fashion25d-picker button:before{
+ content:"◯";font-size:22px;position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#92a09e
+}
+body.v6-ready .v6-left .fashion25d-picker button.active{
+ background:linear-gradient(115deg,#263f2d,#263930)!important;
+ color:#bfffac!important;border-color:#9ae58d!important;
+ outline:0!important;box-shadow:0 0 0 1px #a7eb962b
+}
+body.v6-ready .v6-left .fashion25d-picker button.active:before{content:"◉";color:#aff49b}
+body.v6-ready .v6-left .avatar-v4-switch{background:#1c2228;border-color:#374047}
+body.v6-ready .v6-left .fashion25d-note{color:#a4b2b8}
+body.v6-ready .v6-left .v6-tip{background:#1f2b23;border-color:#375a3e}
+body.v6-ready .v6-stage-panel{
+ border:1px solid #4a505c;border-radius:26px;background:radial-gradient(ellipse at 51% 29%,#46494e 0%,#32353b 37%,#1b2029 82%);
+ box-shadow:0 22px 70px #0006, inset 0 1px #ffffff1d;position:relative
+}
+body.v6-ready .v6-stage-panel:before{
+ content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+ background:linear-gradient(110deg,#ffffff06,transparent 29%,transparent 76%,#00000019);
+}
+body.v6-ready .v6-stage-heading{height:61px;padding:20px 20px 10px}
+body.v6-ready .v6-stage-heading strong{font-size:12px;letter-spacing:1.4px}
+body.v6-ready .v6-stage-heading span{
+ color:#d0f6c9;background:#284632;border:1px solid #67866e;font-size:10px;padding:7px 11px;
+ border-radius:100px;white-space:nowrap
+}
+body.v6-ready #avatarPanel .v6-center .stage{height:590px;min-height:590px}
+body.v6-ready .v6-stage-footer{
+ display:flex;gap:12px;align-items:center;background:#151a21a8;border-top:1px solid #ffffff14;
+ min-height:52px;padding:8px 16px
+}
+body.v6-ready .v6-stage-footer span{color:#aeb8bd;font-size:11px;line-height:1.4}
+body.v6-ready .v6-stage-footer button{
+ border:1px solid #496d49;background:#243b2b;color:#bbffb0;border-radius:11px;min-height:37px
+}
+body.v6-ready .v6-right .v6-look-head{margin-bottom:15px}
+body.v6-ready .v6-right .v6-look-head h3{font-size:14px}
+body.v6-ready .v6-right .v6-look-head small{border:1px solid #527657;border-radius:99px;padding:5px 7px;background:#24392b}
+body.v6-ready .v6-right .v3-studio-actions{gap:9px}
+body.v6-ready .v6-right .v3-studio-actions button{
+ border-radius:12px!important;min-height:44px;font-weight:750
+}
+body.v6-ready .v6-right .v3-garment-grid{gap:10px}
+body.v6-ready .v6-right .v3-garment-card{
+ min-height:83px;border:1px solid #373f49;border-radius:15px;
+ background:linear-gradient(125deg,#2a3038,#232831);box-shadow:inset 0 1px #ffffff0a;
+ transition:transform .13s,border-color .13s
+}
+body.v6-ready .v6-right .v3-garment-card:hover{border-color:#a3d998;transform:translateY(-1px)}
+body.v6-ready .v6-right .v3-garment-thumb{background:#f0f1ed;border-radius:11px}
+body.v6-ready .v6-right .v6-info-card{background:#1e2d28;border-color:#3d5947}
+body.v6-ready #closetShelf{background:linear-gradient(150deg,#191d22,#14191e)}
+body.v6-ready .inv-card{border-radius:18px;background:#22262d;border:1px solid #394148}
+body.v6-ready .inv-photo{background:linear-gradient(135deg,#f7f8f4,#e3e7e3)}
+body.v6-ready #importPanel{background:#171e22;border:1px solid #35483d}
+body.v6-ready .closet-photo-picker{background:linear-gradient(135deg,#22382b,#1e2b27);border-color:#6d956b}
+body.v6-ready .v61-quickbar{display:none}
+body.v6-ready .v61-inline-label{display:none}
+body.v6-ready .v61-mobile-footer{display:none}
+@media (max-width:1220px) and (min-width:791px){
+ body.v6-ready #avatarFold .studio.v6-workspace{grid-template-columns:minmax(190px,220px) minmax(0,1fr) minmax(235px,270px);gap:11px}
+ body.v6-ready .v6-side,body.v6-ready .v6-right{padding:13px}
+ body.v6-ready #avatarPanel .v6-center .stage{height:545px;min-height:545px}
+ body.v6-ready .v61-masthead .wardrobe-tabs button{min-width:114px}
+}
+@media(max-width:790px){
+ body.v6-ready{padding:0 11px 34px}
+ body.v6-ready .v61-masthead{
+  display:grid;grid-template-columns:1fr auto;gap:9px 9px;min-height:0;
+  padding:11px 3px 10px;margin:0 -2px 12px
+ }
+ body.v6-ready .v61-masthead .wardrobe-header{grid-column:1;grid-row:1}
+ body.v6-ready .v61-masthead .wardrobe-header h1{font-size:20px!important;letter-spacing:2.1px;gap:6px}
+ body.v6-ready .v61-masthead .wardrobe-header h1 span{font-size:7px;letter-spacing:4.4px}
+ body.v6-ready .v61-masthead .app-settings{grid-column:2;grid-row:1}
+ body.v6-ready .v61-masthead .app-settings>summary{width:38px;height:38px;font-size:17px;border-radius:11px}
+ body.v6-ready .v61-masthead .wardrobe-tabs{
+  grid-column:1/-1;grid-row:2;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  padding:0;gap:7px;margin:0;width:100%
+ }
+ body.v6-ready .v61-masthead .wardrobe-tabs button{
+  width:100%;min-width:0;min-height:45px;font-size:12px;padding:10px 4px;border-radius:12px;gap:4px
+ }
+ body.v6-ready .v61-masthead .app-settings>div{top:43px}
+ body.v6-ready .v61-masthead .app-settings>small{top:112px}
+ body.v6-ready #avatarPanel{padding-top:1px}
+ body.v6-ready .v6-topbar{margin:0 0 9px;align-items:center;gap:8px}
+ body.v6-ready .v6-topbar>div:first-child{gap:2px}
+ body.v6-ready .v6-topbar .v6-tag{font-size:9px;padding:4px 9px;letter-spacing:.9px}
+ body.v6-ready .v6-topbar h2{font-size:22px;line-height:1.15;margin:1px 0}
+ body.v6-ready .v6-topbar p{display:none}
+ body.v6-ready #avatarFold .v6-view-tabs{margin:0;padding:3px;flex-wrap:nowrap;gap:2px;border-radius:12px}
+ body.v6-ready #avatarFold .v6-view-tabs button{flex:1;min-width:0;font-size:11px;min-height:36px;padding:8px 10px;white-space:nowrap}
+ body.v6-ready .v6-version-note{display:none}
+ body.v6-ready #avatarFold .studio.v6-workspace{display:flex;flex-direction:column;gap:10px}
+ body.v6-ready .v6-center{order:1;width:100%}
+ body.v6-ready .v6-right{order:2;width:100%;padding:15px}
+ body.v6-ready .v6-left{order:3;width:100%;padding:14px}
+ body.v6-ready .v61-quickbar{
+  display:block;background:#151b20;border:1px solid #333f44;border-radius:16px;
+  padding:7px;margin-bottom:10px
+ }
+ body.v6-ready .v61-quickbar .fashion25d-picker{
+  margin:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px
+ }
+ body.v6-ready .v61-quickbar .fashion25d-picker button{
+  width:100%;min-width:0;min-height:41px;border-radius:11px;padding:8px 4px;
+  font-size:11px;font-weight:750;background:#293037;color:#cad4d4;
+  border:1px solid #424b50;overflow:hidden;white-space:nowrap;text-overflow:ellipsis
+ }
+ body.v6-ready .v61-quickbar .fashion25d-picker button.active{
+  background:#baffaa;color:#1a2a1d;border-color:#bcffab;outline:0;box-shadow:inset 0 1px #fff5
+ }
+ body.v6-ready .v6-stage-panel{border-radius:19px}
+ body.v6-ready .v6-stage-heading{height:44px;padding:12px 14px 6px}
+ body.v6-ready .v6-stage-heading strong{font-size:10px;letter-spacing:1px}
+ body.v6-ready .v6-stage-heading span{font-size:10px;padding:5px 8px}
+ body.v6-ready #avatarPanel .v6-center .stage{height:475px;min-height:475px}
+ body.v6-ready .v6-stage-footer{padding:8px 12px;min-height:48px}
+ body.v6-ready .v6-stage-footer span{font-size:10px;max-width:66%}
+ body.v6-ready .v6-stage-footer button{font-size:11px;min-height:35px;padding:7px 10px}
+ body.v6-ready .v6-mobile-hint{display:none}
+ body.v6-ready .v6-right .v3-studio-head{margin:3px 0 12px}
+ body.v6-ready .v6-right .v3-garment-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ body.v6-ready .v6-right .v3-garment-card{min-height:77px;padding:7px}
+ body.v6-ready .v6-right .v3-garment-thumb{width:47px;height:59px;flex:0 0 47px}
+ body.v6-ready .v6-left .v6-sidebar-section:first-of-type{margin-top:4px}
+ body.v6-ready .v6-left .v61-mode-section{display:none}
+ body.v6-ready .v6-left .v6-tip{margin-top:8px}
+ body.v6-ready .v6-right .v6-info-card{margin-top:11px}
+}
+@media(max-width:430px){
+ body.v6-ready .v61-masthead .wardrobe-tabs button{font-size:11px}
+ body.v6-ready #avatarPanel .v6-center .stage{height:460px;min-height:460px}
+ body.v6-ready .v6-topbar .v6-tag{font-size:8px}
+ body.v6-ready .v6-stage-footer span{max-width:62%}
+}
+@media (prefers-reduced-motion:reduce){body.v6-ready *{transition:none!important;animation:none!important}}
