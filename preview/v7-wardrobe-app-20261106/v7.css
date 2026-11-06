@@ -250,3 +250,82 @@ body.v7-active .v7-slot-thumb img{
 @media(max-width:800px){
  body.v7-active .v7-slot-thumb{flex-basis:77px;height:77px;min-height:0}
 }
+
+
+/* V7.1 iPhone QA: never cover product cards with a floating selection CTA.
+ * Selection is a compact inline action immediately above the product grid. */
+body.v7-active .v7-selectionbar{
+ position:static!important;inset:auto!important;
+ display:flex;justify-content:flex-end;align-items:center;gap:12px;
+ margin:0 0 13px;padding:0;background:transparent!important;
+ border:0;box-shadow:none!important;backdrop-filter:none!important;
+ -webkit-backdrop-filter:none!important;z-index:auto;color:#a7b9ae;
+}
+body.v7-active .v7-selectionbar .v7-selection-label{font-size:12px;white-space:nowrap}
+body.v7-active .v7-selectionbar .v7-primary{min-height:36px;padding:8px 12px;font-size:12px}
+
+/* Product images are editable again, without interfering with favorites. */
+body.v7-active .v7-item-photo{isolation:isolate}
+body.v7-active .v7-edit-photo{
+ position:absolute;inset:0;width:100%;height:100%;z-index:1;
+ border:none;border-radius:0;background:transparent;color:transparent;
+ padding:0;cursor:pointer;
+}
+body.v7-active .v7-edit-icon{
+ display:grid;place-items:center;position:absolute;top:10px;left:10px;
+ width:30px;height:30px;background:#fffdf4e9;border:1px solid #dde4df;
+ border-radius:50%;color:#1b2a20;z-index:2;font-size:16px;
+ pointer-events:none;opacity:.86;
+}
+body.v7-active .v7-heart{z-index:3}
+body.v7-active .v7-item-photo:focus-within .v7-edit-icon{
+ background:#d1ffc2;outline:2px solid #4baf72;
+}
+
+/* Empty-state belongs to the full Looks row, not the first grid column. */
+body.v7-active .v7-looks-empty{
+ grid-column:1/-1;max-width:590px;width:100%;
+ margin:8px auto;padding:34px 25px;justify-self:center;
+}
+body.v7-active .v7-looks-empty h3{font-size:23px;line-height:1.3}
+body.v7-active .v7-looks-empty p{max-width:370px;margin:14px auto 22px}
+body.v7-active .v7-looks-empty button{max-width:100%}
+
+/* Accessible Safari file picker on the actual original backup <input>. */
+body.v7-active .v7-backup-import{
+ position:relative;display:flex;align-items:center;justify-content:center;
+ width:100%;min-height:45px;margin:9px 0 5px;overflow:hidden;
+ background:#26372c;border:1px solid #608e67;border-radius:13px;
+ color:#d1fac7;font-size:13px;font-weight:750;cursor:pointer;
+}
+body.v7-active .v7-backup-import input[type=file]{
+ position:absolute;inset:0;display:block!important;
+ width:100%;height:100%;opacity:0;cursor:pointer;
+ font-size:200px;
+}
+
+/* Keep the old inventory edit dialog above the new bottom navigation. */
+body.v7-active>.inv-edit{z-index:1000}
+body.v7-active>.inv-edit .inv-editbox{
+ max-height:min(87dvh,750px);overflow-y:auto;overscroll-behavior:contain
+}
+
+@media(max-width:800px){
+ body.v7-active .v7-selectionbar{position:static!important;bottom:auto!important;padding:0!important;margin:0 0 12px!important;z-index:auto!important}
+ body.v7-active .v7-selectionbar .v7-selection-label{font-size:11px}
+ body.v7-active .v7-selectionbar .v7-primary{min-height:36px;font-size:11px}
+ body.v7-active .v7-create-picker{grid-template-columns:repeat(2,minmax(0,1fr))}
+ body.v7-active .v7-looks-empty{padding:35px 23px;margin:3px 0 12px;border-radius:20px}
+ body.v7-active .v7-looks-empty h3{font-size:20px}
+ body.v7-active .v7-edit-icon{width:29px;height:29px;top:7px;left:7px}
+}
+
+/* One large, usable saved-Look card per row on mobile. */
+@media(max-width:800px){
+ body.v7-active .v7-looks-grid{grid-template-columns:minmax(0,1fr)}
+ body.v7-active .v7-saved-look{width:100%;min-width:0}
+ body.v7-active .v7-saved-collage{height:220px;padding:22px}
+ body.v7-active .v7-saved-info{padding:14px 17px}
+ body.v7-active .v7-saved-info h3{font-size:17px}
+ body.v7-active .v7-saved-actions{padding:0 17px 17px}
+}

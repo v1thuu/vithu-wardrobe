@@ -69,7 +69,7 @@ function makeWardrobe(){
  const search=el('input','v7-search');search.id='v7-search';search.type='search';
  search.placeholder='Kleidung durchsuchen';search.setAttribute('aria-label','Garderobe durchsuchen');
  search.addEventListener('input',()=>{state.search=search.value.toLocaleLowerCase('de');renderWardrobe();});
- top.append(search,button('＋ Hinzufügen','v7-action-outline',()=>navigate('import')));
+ top.append(search,button('+ Hinzufügen','v7-action-outline',()=>navigate('import')));
  const bar=el('div','v7-chips');bar.id='v7-wardrobe-categories';
  wardrobeGrid=el('div','v7-wardrobe-grid');wardrobeGrid.id='v7-wardrobe-grid';
  const empty=el('div','v7-empty');
@@ -77,11 +77,11 @@ function makeWardrobe(){
  empty.append(el('div','v7-empty-art','◈'),el('h3','','Noch keine Kleidungsstücke'),
   el('p','','Importiere dein erstes Foto. Deine Garderobe wird lokal in diesem Browser gespeichert.'),
   button('Kleidung hinzufügen','v7-primary',()=>navigate('import')));
- outer.append(top,bar,wardrobeGrid,empty);
  const sticky=el('div','v7-selectionbar');sticky.id='v7-wardrobe-selection';
  sticky.append(el('span','v7-selection-label','0 Teile im Look'),
- button('Outfit erstellen','v7-primary',()=>navigate('create')));
- outer.append(sticky);return outer;
+ button('Outfit erstellen ↗','v7-primary',()=>navigate('create')));
+ // Keep this action ABOVE the garment grid, never as a sticky occluding overlay.
+ outer.append(top,bar,sticky,wardrobeGrid,empty);return outer;
 }
 function makeCreate(){
  const {outer,head}=page('Outfit erstellen','MIX & MATCH');
@@ -141,7 +141,7 @@ function makeAvatar(){
 }
 function makeLooks(){
  const {outer,head}=page('Meine Looks','DEINE GESPEICHERTEN OUTFITS');
- head.append(button('＋ Neuer Look','v7-head-cta',()=>navigate('create')));
+ head.append(button('+ Neuer Look','v7-head-cta',()=>navigate('create')));
  const grid=el('div','v7-looks-grid');grid.id='v7-looks-grid';outer.append(grid);
  return outer;
 }
@@ -157,11 +157,11 @@ function makeSettings(){
  const heading=el('div','v7-dialog-head');heading.append(el('h2','','Einstellungen'),
   button('✕','v7-icon-button',()=>dlg.close(),'Schliessen'));
  const desc=el('p','','Daten werden im Browser dieses Geräts gespeichert. Der Export eignet sich als Sicherung oder zum Wechseln zwischen Geräten.');
+ // Use a native label/input pair: Safari supports it even inside an in-app browser.
+ const backupLabel=el('label','v7-backup-import','↑ Backup importieren');
+ backupLabel.id='v7-backup-import-label';
  dlg.append(heading,desc,button('Backup exportieren','v7-primary',()=>exportBackup()),
- button('Backup importieren','v7-action-outline',()=>{
-  dlg.close();const file=$('importBackupInput')||document.querySelector('input[type=file][onchange*="importBackup"]');
-  if(file)file.click();
- }),button('Schliessen','v7-soft',()=>dlg.close()));return dlg;
+ backupLabel,button('Schliessen','v7-soft',()=>dlg.close()));return dlg;
 }
 function makeSaveDialog(){
  const dlg=el('dialog','v7-dialog');dlg.id='v7-save-dialog';
@@ -210,6 +210,10 @@ function itemCard(item){
  const article=el('article','v7-item-card');
  const photo=el('div','v7-item-photo');
  photo.append(img(item.shopImage&&item.showShop?item.shopImage:item.image,item.name));
+ const edit=button('','v7-edit-photo',()=>openInvEditor(item.id),
+  safeText(item.name,'Kleidungsstück')+' bearbeiten');
+ edit.title='Kleidungsstück ansehen und bearbeiten';
+ photo.append(edit,el('span','v7-edit-icon','✎'));
  const favorite=button(item.favorite?'♥':'♡','v7-heart',async e=>{
   await toggleFavorite(item.id);updateAll();
  },item.favorite?'Favorit entfernen':'Als Favorit speichern');
@@ -217,10 +221,12 @@ function itemCard(item){
  const desc=el('div','v7-item-caption');
  desc.append(el('span','',labels[item.category]||'Kleidungsstück'),
  el('strong','',safeText(item.name,labels[item.category]||'Kleidungsstück')));
- const act=button(core().chosen[item.category]===item.id?'✓ Im Look':'＋ Outfit',
-  'v7-additem'+(core().chosen[item.category]===item.id?' is-selected':''),
-  async()=>{await choose(item.category,item.id);updateAll();},
-  item.name+' zum Outfit hinzufügen');
+ const isSelected=core().chosen[item.category]===item.id;
+ const act=button(isSelected?'✓ Im Look':'+ Outfit',
+  'v7-additem'+(isSelected?' is-selected':''),
+  async()=>{await choose(item.category,isSelected?'':item.id);updateAll();},
+  isSelected?item.name+' aus dem Outfit entfernen':item.name+' zum Outfit hinzufügen');
+ act.setAttribute('aria-pressed',String(isSelected));
  article.append(photo,desc,act);return article;
 }
 function renderWardrobe(){
@@ -247,7 +253,7 @@ function renderSlots(){
   if(item)thumb.append(img(item.image,item.name));else thumb.append(el('span','',icon(key)));
   const text=el('div','v7-slot-text');text.append(el('small','',title),
    el('strong','',item?safeText(item.name,title):'Teil hinzufügen'));
-  card.append(thumb,text,el('span','v7-slot-action',item?'↻':'＋'));
+  card.append(thumb,text,el('span','v7-slot-action',item?'↻':'+'));
   card.addEventListener('click',()=>{state.createCategory=key;renderCreatePicker();
    $('v7-create-picker').scrollIntoView({block:'start',behavior:'smooth'});});
   slots.append(card);
@@ -286,10 +292,15 @@ function renderLooks(){
  const host=$('v7-looks-grid');host.replaceChildren();
  const {looks,items}=core();
  if(!looks.length){
-  const empty=el('div','v7-looks-empty');empty.append(el('div','v7-empty-art','♡'),
-   el('h3','','Dein erster Look wartet'),
-   el('p','','Stelle ein Outfit zusammen und speichere es mit einem Namen.'),
-   button('Outfit erstellen','v7-primary',()=>navigate('create')));
+  const selected=countSelected(),hasDraft=selected>0;
+  const empty=el('div','v7-looks-empty');
+  empty.append(el('div','v7-empty-art',hasDraft?'✦':'♡'),
+   el('h3','',hasDraft?'Dein Outfit ist bereit':'Noch keine Looks gespeichert'),
+   el('p','',hasDraft
+    ?selected+' Teile sind bereits ausgewählt. Speichere den Look, damit du ihn später wieder anziehen kannst.'
+    :'Kombiniere deine Kleidungsstücke und speichere deinen ersten Look.'),
+   button(hasDraft?'Aktuellen Look speichern':'Outfit erstellen','v7-primary',
+    hasDraft?showSave:()=>navigate('create')));
   host.append(empty);return;
  }
  looks.forEach(look=>{
@@ -370,6 +381,26 @@ function init(){
  root.append(main);
  root.append(makeBottomNav(),makeSettings(),makeSaveDialog());
  document.body.append(root);
+ // The legacy backup input lived inside a header now hidden by V7. Move the
+ // SAME input into a visible native file label, keeping its import handler.
+ const backupFile=document.querySelector('input[type=file][onchange*="importBackup"]');
+ const backupLabel=$('v7-backup-import-label');
+ if(backupFile&&backupLabel){
+  backupFile.id='v7-backup-file';
+  backupFile.setAttribute('aria-label','Bestehendes Garderoben-Backup laden');
+  backupLabel.append(backupFile);
+  backupFile.addEventListener('change',()=>$('v7-settings')?.close());
+ }
+ // Retain the legacy editor including original/clean toggles. Its own
+ // "Anziehen" action must navigate to the V7 Avatar, not just the old tab.
+ const oldWearDetail=window.wearFromInventoryDetail;
+ if(typeof oldWearDetail==='function'){
+  window.wearFromInventoryDetail=async(...args)=>{
+   const result=await oldWearDetail.apply(window,args);
+   navigate('avatar');
+   return result;
+  };
+ }
  const avatarStage=$('v7-stage-host');
  avatarStage.append(stage);
  const controls=$('v7-controls-host');
