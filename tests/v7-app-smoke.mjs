@@ -96,6 +96,7 @@ try{
    chosen={};looks=[];avatarRenderMode='silhouette';view='styled';render();
   });
   await page.waitForFunction(()=>document.querySelectorAll('#v7-wardrobe-grid .v7-item-card').length===4);
+  await page.evaluate(()=>window.scrollTo({top:0,left:0,behavior:'instant'}));
   await page.screenshot({path:await (async()=>{await mkdir(artifacts,{recursive:true});return join(artifacts,kind+'-wardrobe.png')})(),
    animations:'disabled',fullPage:true});
   screenshots.push(kind+'-wardrobe.png');
@@ -106,6 +107,17 @@ try{
    'selected original shirt is present in Create board');
   await page.locator('#v7-create-picker .v7-additem').nth(2).click();
   await page.waitForFunction(()=>window.__vithuV7.inspect().selected>=2);
+  const slotBounds=await page.locator('#v7-board-slots .has-item .v7-slot-thumb')
+   .evaluateAll(nodes=>nodes.map(n=>{
+    const img=n.querySelector('img'),box=n.getBoundingClientRect(),pic=img.getBoundingClientRect();
+    return {boxHeight:box.height,imageHeight:pic.height,inside:
+      pic.top>=box.top-1&&pic.bottom<=box.bottom+1&&pic.left>=box.left-1&&pic.right<=box.right+1};
+   }));
+  assert.ok(slotBounds.length>=2,'two actual picked garments in Create collage');
+  assert.ok(slotBounds.every(v=>v.inside&&v.boxHeight<=120),
+   'no garment image overflows its collage slot');
+  await page.evaluate(()=>window.scrollTo({top:0,left:0,behavior:'instant'}));
+  await page.waitForTimeout(80);
   await page.screenshot({path:join(artifacts,kind+'-create.png'),animations:'disabled',fullPage:true});
   screenshots.push(kind+'-create.png');
   await page.evaluate(()=>window.__vithuV7.go('avatar'));
@@ -127,6 +139,7 @@ try{
   assert.ok(anatomy.bodyTopDelta<2&&anatomy.headTopDelta<2,'head remains aligned with body instead of falling below shoes');
   assert.equal(anatomy.headPresent,true,'personalized head SVG rendered');
   assert.equal(anatomy.legacyHidden,true,'old cartoon layer hidden in Fashion 2.5D');
+  await page.evaluate(()=>window.scrollTo({top:0,left:0,behavior:'instant'}));
   await page.screenshot({path:join(artifacts,kind+'-avatar.png'),animations:'disabled',fullPage:true});
   screenshots.push(kind+'-avatar.png');
   await page.click('#fashionStudioChoice');
