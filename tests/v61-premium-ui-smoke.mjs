@@ -126,6 +126,12 @@ try{
   assert.equal(premium.bodyClass,true,'scoped UI styles activated');
   assert.ok(premium.horizontalOverflow<=2,'no mobile/desktop horizontal overflow');
   if(label==='iphone')assert.equal(premium.quickParent,'v61-quickbar','all modes above avatar on iPhone');
+  if(label==='iphone'){
+   const modeRows=await page.locator('.v61-quickbar .fashion25d-picker button')
+    .evaluateAll(nodes=>nodes.map(n=>Math.round(n.getBoundingClientRect().top)));
+   assert.equal(modeRows.length,3,'three genuine style buttons');
+   assert.equal(new Set(modeRows).size,1,'all iPhone avatar choices align on one compact row');
+  }
   else assert.notEqual(premium.quickParent,'v61-quickbar','desktop controls stay in sidebar');
   await page.evaluate(()=>{
    window.__v61Jumped=false;
@@ -184,6 +190,10 @@ try{
   await page.waitForFunction(()=>document.querySelectorAll('.v3-garment-card').length>=2,
    {timeout:15000});
   await mkdir(resultDir,{recursive:true});
+  // A sticky header captured at a scrolled position can appear halfway
+  // down a full-page PNG even when the real UI is correct.
+  await page.evaluate(()=>window.scrollTo({top:0,left:0,behavior:'instant'}));
+  await page.waitForTimeout(120);
   const filename=join(resultDir,label+'-premium-dashboard.png');
   await page.screenshot({path:filename,fullPage:true,animations:'disabled'});
   captures.push({label,filename,viewport:{width,height,dpr}});
