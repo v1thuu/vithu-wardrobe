@@ -94,7 +94,8 @@ try{
   });
   assert.equal(layout.stageParent,'v6-center','stage moved to center column');
   assert.equal(layout.pickerParent,'v6-right','real outfit picker moved to right');
-  assert.equal(layout.ctrlParent,'v6-left','avatar controls moved to left');
+  if(label==='desktop')assert.equal(layout.ctrlParent,'v6-left','desktop controls live in sidebar');
+  else assert.equal(layout.ctrlParent,undefined,'mobile controls moved above stage, not sidebar');
   assert.equal(layout.original,true,'unchanged original-cutout SVG present');
   const premium=await page.evaluate(()=>{
    const mast=document.getElementById('v61-masthead');
