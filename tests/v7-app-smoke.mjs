@@ -140,10 +140,12 @@ try{
   screenshots.push(kind+'-wardrobe.png');
   await page.locator('#v7-wardrobe-grid .v7-additem').first().click();
   await page.waitForFunction(()=>window.__vithuV7.inspect().selected===0);
+  await page.waitForFunction(()=>document.querySelector('#v7-wardrobe-grid .v7-additem')?.getAttribute('aria-pressed')==='false');
   assert.equal(await page.locator('#v7-wardrobe-grid .v7-additem').first().getAttribute('aria-pressed'),'false',
    'selected garment can be removed by tapping its selected state');
   await page.locator('#v7-wardrobe-grid .v7-additem').first().click();
   await page.waitForFunction(()=>window.__vithuV7.inspect().selected===1);
+  await page.waitForFunction(()=>document.querySelector('#v7-wardrobe-grid .v7-additem')?.getAttribute('aria-pressed')==='true');
   assert.equal(await page.locator('#v7-wardrobe-grid .v7-additem').first().getAttribute('aria-pressed'),'true',
    'same garment can be selected again');
   await page.evaluate(()=>window.__vithuV7.go('create'));
