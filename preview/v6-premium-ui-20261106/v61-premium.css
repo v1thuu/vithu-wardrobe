@@ -227,3 +227,15 @@ body.v6-ready .v61-mobile-footer{display:none}
  body.v6-ready .v6-stage-footer span{max-width:62%}
 }
 @media (prefers-reduced-motion:reduce){body.v6-ready *{transition:none!important;animation:none!important}}
+
+/* Safari/iPhone: override the old ID-scoped flex rule. Keep all three choices in one row. */
+@media(max-width:790px){
+ body.v6-ready #avatarPanel .v61-quickbar .fashion25d-picker{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important;
+  width:100%;min-width:0;margin:0!important
+ }
+ body.v6-ready #avatarPanel .v61-quickbar .fashion25d-picker button{
+  width:100%;min-width:0;max-width:100%;padding:8px 3px!important;
+  font-size:10px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+ }
+}
