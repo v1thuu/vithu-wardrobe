@@ -192,6 +192,13 @@ function sync(){
  const active=mode==='fashion'&&typeof avatarRenderMode!=='undefined'
   &&avatarRenderMode==='silhouette'&&typeof view!=='undefined'&&view==='styled';
  figure.classList.toggle('fashion25d-enabled',active);
+ // Explicit inline visibility prevents WebKit from retaining the old SVG
+ // during class-only display changes on a composited mobile stage.
+ const legacy=figure.querySelector('#personaDrawing');
+ if(legacy)legacy.style.setProperty('display',active?'none':'block','important');
+ base.style.setProperty('display',active?'block':'none','important');
+ front.style.setProperty('display',active?'block':'none','important');
+ figure.dataset.fashion25dActive=String(active);
  const primary=document.getElementById('fashion25dChoice');
  const fallback=document.getElementById('fashionV5Choice');
  if(primary){primary.classList.toggle('active',mode==='fashion');primary.classList.toggle('secondary',mode!=='fashion');primary.setAttribute('aria-pressed',String(mode==='fashion'));}
