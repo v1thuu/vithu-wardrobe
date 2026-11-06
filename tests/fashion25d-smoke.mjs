@@ -109,10 +109,22 @@ try{
   await page.screenshot({path:target,fullPage:false,animations:'disabled'});
   screenshots.push({state,path:target});
  }
+ const fashionStage=await page.locator('#stage').screenshot({animations:'disabled'});
  await page.click('#fashionV5Choice');
  assert.equal(await page.evaluate(()=>
   document.getElementById('figure').classList.contains('fashion25d-enabled')),false,
   'V5 fallback remains selectable');
+ const v5Stage=await page.locator('#stage').screenshot({animations:'disabled'});
+ assert.notEqual(Buffer.compare(fashionStage,v5Stage),0,
+  'Switching Fashion/V5 must visibly alter stage pixels, not only toggle button styling');
+ const visibility=await page.evaluate(()=>({
+  old:getComputedStyle(document.querySelector('#personaDrawing')).display,
+  base:getComputedStyle(document.querySelector('#fashion25dBase')).display,
+  front:getComputedStyle(document.querySelector('#fashion25dForeground')).display
+ }));
+ assert.equal(visibility.old,'block','fallback SVG visible');
+ assert.equal(visibility.base,'none','2.5D base hidden on fallback');
+ assert.equal(visibility.front,'none','2.5D head/hands hidden on fallback');
  const legacy=join(out,'v5-rollback.png');
  await page.screenshot({path:legacy,fullPage:false,animations:'disabled'});
  screenshots.push({state:'v5-rollback',path:legacy});
