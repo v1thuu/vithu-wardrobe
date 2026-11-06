@@ -39,7 +39,7 @@ function makeHeader(){
  const brand=el('div','v7-brand');
  brand.append(el('strong','','VITHU'),el('span','','WARDROBE'));
  const tools=el('div','v7-headtools');
- tools.append(button('＋','v7-head-add',()=>navigate('import'),'Kleidung hinzufügen'),
+ tools.append(button('+','v7-head-add',()=>navigate('import'),'Kleidung hinzufügen'),
   button('⋯','v7-head-settings',()=>showSettings(),'Weitere Einstellungen'));
  const nav=el('nav','v7-desktop-nav');nav.setAttribute('aria-label','Hauptnavigation');
  const tabs=[['wardrobe','Garderobe'],['create','Create'],['avatar','Avatar'],['looks','Looks']];
@@ -48,7 +48,7 @@ function makeHeader(){
 }
 function makeBottomNav(){
  const nav=el('nav','v7-bottom-nav');nav.setAttribute('aria-label','Mobile Hauptnavigation');
- [['wardrobe','▦','Garderobe'],['create','✦','Create'],['avatar','♙','Avatar'],['looks','♡','Looks']]
+ [['wardrobe','▦','Garderobe'],['create','✦','Create'],['avatar','◉','Avatar'],['looks','♡','Looks']]
  .forEach(([key,glyph,label])=>{
   const b=button('', 'v7-bottom-link',()=>navigate(key),label);
   b.dataset.screen=key;b.append(el('span','v7-nav-icon',glyph),el('span','',label));nav.append(b);
