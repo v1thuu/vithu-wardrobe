@@ -107,6 +107,7 @@ try{
    'selected original shirt is present in Create board');
   await page.locator('#v7-create-picker .v7-additem').nth(2).click();
   await page.waitForFunction(()=>window.__vithuV7.inspect().selected>=2);
+  await page.waitForFunction(()=>document.querySelectorAll('#v7-board-slots .has-item').length>=2);
   const slotBounds=await page.locator('#v7-board-slots .has-item .v7-slot-thumb')
    .evaluateAll(nodes=>nodes.map(n=>{
     const img=n.querySelector('img'),box=n.getBoundingClientRect(),pic=img.getBoundingClientRect();
