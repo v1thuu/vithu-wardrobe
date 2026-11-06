@@ -234,3 +234,19 @@ body.v7-active #v7-stage-host .figure.fashion25d-enabled #fashion25dBase,
 body.v7-active #v7-stage-host .figure.fashion25d-enabled #fashion25dForeground{display:block}
 body.v7-active #v7-stage-host .figure .persona-drawing{filter:drop-shadow(3px 6px 6px #0005)}
 body.v7-active #v7-stage-host .figure #avatarV2Garments{filter:drop-shadow(1px 3px 2px #0003)}
+
+/* Product cutouts in the Create collage must never escape their slot.
+ * Prevents intrinsically sized transparent images from obscuring text or
+ * covering the next row, including Safari's grid min-content behavior. */
+body.v7-active .v7-slot-thumb{
+ position:relative;display:block;min-width:0;min-height:0;
+ flex:0 0 115px;overflow:hidden;width:100%;isolation:isolate
+}
+body.v7-active .v7-slot-thumb img{
+ position:absolute;inset:0;width:100%!important;height:100%!important;
+ max-width:100%!important;max-height:100%!important;
+ object-fit:contain;display:block
+}
+@media(max-width:800px){
+ body.v7-active .v7-slot-thumb{flex-basis:77px;height:77px;min-height:0}
+}
