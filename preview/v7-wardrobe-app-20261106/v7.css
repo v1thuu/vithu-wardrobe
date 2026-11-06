@@ -319,3 +319,13 @@ body.v7-active>.inv-edit .inv-editbox{
  body.v7-active .v7-looks-empty h3{font-size:20px}
  body.v7-active .v7-edit-icon{width:29px;height:29px;top:7px;left:7px}
 }
+
+/* One large, usable saved-Look card per row on mobile. */
+@media(max-width:800px){
+ body.v7-active .v7-looks-grid{grid-template-columns:minmax(0,1fr)}
+ body.v7-active .v7-saved-look{width:100%;min-width:0}
+ body.v7-active .v7-saved-collage{height:220px;padding:22px}
+ body.v7-active .v7-saved-info{padding:14px 17px}
+ body.v7-active .v7-saved-info h3{font-size:17px}
+ body.v7-active .v7-saved-actions{padding:0 17px 17px}
+}
