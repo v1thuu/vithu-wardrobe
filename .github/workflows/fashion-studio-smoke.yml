@@ -1,0 +1,38 @@
+name: Fashion Studio Mannequin iPhone proof
+
+on:
+  push:
+    branches:
+      - feat/fashion-studio-mannequin-20261106
+  pull_request:
+    paths:
+      - 'preview/avatar-fashion25d-20261106/**'
+      - 'tests/fashion-studio-smoke.mjs'
+      - '.github/workflows/fashion-studio-smoke.yml'
+  workflow_dispatch:
+
+jobs:
+  screenshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install free test browser
+        run: |
+          npm install --no-save playwright
+          npx playwright install chromium
+      - name: Test Fashion 2.5D, Studio-Mannequin and V5 visibility/garment preservation
+        run: node tests/fashion-studio-smoke.mjs
+      - name: Upload synthetic iPhone screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fashion-studio-mannequin-iphone
+          path: artifacts/fashion25d-iphone/
+          retention-days: 30
+          if-no-files-found: warn
