@@ -24,7 +24,7 @@ jobs:
       - name: Install test-only Playwright (no production dependency)
         run: |
           npm install --no-save playwright
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - name: Test real layered SVG, dynamic sleeve clip, V5 fallback
         run: node tests/fashion25d-smoke.mjs
       - name: Store iPhone screenshot comparison
