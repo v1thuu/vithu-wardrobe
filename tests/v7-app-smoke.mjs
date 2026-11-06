@@ -139,7 +139,13 @@ try{
    animations:'disabled',fullPage:true});
   screenshots.push(kind+'-wardrobe.png');
   await page.locator('#v7-wardrobe-grid .v7-additem').first().click();
+  await page.waitForFunction(()=>window.__vithuV7.inspect().selected===0);
+  assert.equal(await page.locator('#v7-wardrobe-grid .v7-additem').first().getAttribute('aria-pressed'),'false',
+   'selected garment can be removed by tapping its selected state');
+  await page.locator('#v7-wardrobe-grid .v7-additem').first().click();
   await page.waitForFunction(()=>window.__vithuV7.inspect().selected===1);
+  assert.equal(await page.locator('#v7-wardrobe-grid .v7-additem').first().getAttribute('aria-pressed'),'true',
+   'same garment can be selected again');
   await page.evaluate(()=>window.__vithuV7.go('create'));
   assert.equal(await page.evaluate(()=>document.querySelectorAll('#v7-board-slots .has-item').length),1,
    'selected original shirt is present in Create board');
@@ -213,6 +219,14 @@ try{
   await page.locator('#v7-save-dialog .v7-primary').click();
   await page.waitForFunction(()=>window.__vithuV7.inspect().looks===1&&window.__vithuV7.inspect().screen==='looks');
   assert.equal(await page.locator('.v7-saved-look').count(),1,'new Look stored in existing data structure');
+  if(kind==='iphone'){
+   const widths=await page.evaluate(()=>{
+    const grid=document.querySelector('#v7-looks-grid').getBoundingClientRect();
+    const card=document.querySelector('#v7-looks-grid .v7-saved-look').getBoundingClientRect();
+    return {ratio:card.width/grid.width};
+   });
+   assert.ok(widths.ratio>.9,'saved Look uses the available mobile width');
+  }
   await page.screenshot({path:join(artifacts,kind+'-looks.png'),animations:'disabled',fullPage:true});
   screenshots.push(kind+'-looks.png');
   await page.getByRole('button',{name:'Anziehen',exact:true}).first().click();
