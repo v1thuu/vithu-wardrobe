@@ -1,0 +1,37 @@
+name: Fashion 2.5D sleeve/occlusion iPhone checks
+
+on:
+  push:
+    branches:
+      - fix/fashion25d-arm-sleeve-masking-20261106
+  pull_request:
+    paths:
+      - 'preview/avatar-fashion25d-20261106/**'
+      - 'tests/fashion25d-smoke.mjs'
+  workflow_dispatch:
+
+jobs:
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install test-only Playwright (no production dependency)
+        run: |
+          npm install --no-save playwright
+          npx playwright install chromium
+      - name: Test real layered SVG, dynamic sleeve clip, V5 fallback
+        run: node tests/fashion25d-smoke.mjs
+      - name: Store iPhone screenshot comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fashion25d-sleeve-iphone-390x844-dpr3
+          path: artifacts/fashion25d-iphone/
+          if-no-files-found: warn
+          retention-days: 30

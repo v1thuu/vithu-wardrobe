@@ -49,6 +49,34 @@ function wearing(category){
  const id=chosen[category];
  return Boolean(id&&items.some(item=>item.id===id&&item.category===category&&item.image));
 }
+const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
+// The garment only decides where the bare forearm becomes visible.
+// It never changes arm geometry, thickness, hands, head or torso.
+function selectedSleeveGarment(){
+ if(typeof chosen!=='object'||!chosen||typeof items==='undefined')return null;
+ const category=chosen.outerwear?'outerwear':'top';
+ const id=chosen[category];
+ if(!id)return null;
+ const item=items.find(x=>x.id===id&&x.category===category&&x.image);
+ return item?{item,category}:null;
+}
+function bareArmStart(){
+ const selected=selectedSleeveGarment();
+ if(!selected)return 123;
+ if(selected.category==='outerwear')return 148;
+ const item=selected.item;
+ const placement=window.getAdaptiveCutoutPlacementV5?.(item,'top')||
+   window.getNaturalCutoutPlacementV4?.(item,'top');
+ const sleeve=window.getNaturalSleeveFitV4?.(item,'top',placement);
+ const measured=Number.isFinite(sleeve?.y)&&Number.isFinite(sleeve?.confidence)&&
+   sleeve.confidence>=.05&&sleeve.y>=105&&sleeve.y<=171;
+ if(measured)return Math.round(clamp(sleeve.y-2,119,163));
+ // With uncertain alpha, hide the shoulder section rather than drawing
+ // exposed skin triangles above an unknown sleeve opening.
+ return Math.round(clamp(
+  Number.isFinite(placement?.y)&&Number.isFinite(placement?.height)
+   ?placement.y+placement.height*.42:134,126,151));
+}
 function gradientDefs(c){
  return '<defs>'+
  '<linearGradient id="f25-skin" x1="0" y1="0" x2="1" y2=".15" gradientUnits="objectBoundingBox">'+
@@ -172,14 +200,20 @@ function handMarkup(){
 function renderPerson(){
  const p=currentProfile(),c=skins[p.skin];
  const build=radii[p.build],profileScale='translate(90 0) scale('+build+' 1) translate(-90 0)';
- // The real garment overlay remains its own unmodified SVG above this base.
+ const armStart=bareArmStart();
+ // The forearm begins at the actual cuff. The garment is never modified.
+ // Keep this clip inside the body-space SVG so lean/broad body transforms
+ // cannot shift it independently of the arm geometry.
  base.innerHTML=gradientDefs(c)+
+ '<defs><clipPath id="f25-arm-visible" clipPathUnits="userSpaceOnUse">'+
+ '<rect id="fashion25dSleeveClip" x="0" y="'+armStart+'" width="180" height="300"/>'+
+ '</clipPath></defs>'+
  '<g id="fashion25dLower" transform="translate(90 0) scale('+({lean:.96,athletic:1,broad:1.05}[p.build])+' 1) translate(-90 0)">'+
  (!wearing('bottom')?pantsMarkup():'')+
  (!wearing('shoes')?shoesMarkup():'')+
  '</g>'+
  '<g id="fashion25dUpper" transform="'+profileScale+'">'+
- armMarkup()+
+ '<g clip-path="url(#f25-arm-visible)">'+armMarkup()+'</g>'+
  // No neutral torso may show through or around imported garment cutouts.
  (!wearing('top')&&!wearing('outerwear')?neutralTop():'')+
  '</g>';
@@ -187,6 +221,7 @@ function renderPerson(){
  '<g transform="'+profileScale+'">'+handMarkup()+'</g>'+headMarkup(p,c);
  const root=figure;
  root.dataset.fashionBuild=p.build;
+ root.dataset.fashionSleeveClipStart=String(armStart);
 }
 function sync(){
  const active=mode==='fashion'&&typeof avatarRenderMode!=='undefined'
@@ -206,7 +241,9 @@ function sync(){
  if(!active)return;
  const p=currentProfile();
  const sig=[p.build,p.skin,p.hair,p.beard,p.glasses,
-  wearing('top'),wearing('outerwear'),wearing('bottom'),wearing('shoes')].join('|');
+  chosen?.top||'',chosen?.outerwear||'',chosen?.bottom||'',chosen?.shoes||'',
+  wearing('top'),wearing('outerwear'),wearing('bottom'),wearing('shoes'),
+  bareArmStart()].join('|');
  if(sig!==lastSignature){lastSignature=sig;renderPerson();}
 }
 function selectMode(next){
@@ -215,7 +252,7 @@ function selectMode(next){
  sync();
 }
 window.setFashionAvatarMode=selectMode;
-window.__vithuFashion25dTest={currentProfile,selectMode,sync,renderPerson,hasLocalStorageWrites:false};
+window.__vithuFashion25dTest={currentProfile,selectMode,sync,renderPerson,bareArmStart,hasLocalStorageWrites:false};
 const previousRender=window.renderAvatarV2;
 if(typeof previousRender==='function'){
  window.renderAvatarV2=function(...args){
