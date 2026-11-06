@@ -96,6 +96,44 @@ try{
    chosen={};looks=[];avatarRenderMode='silhouette';view='styled';render();
   });
   await page.waitForFunction(()=>document.querySelectorAll('#v7-wardrobe-grid .v7-item-card').length===4);
+  const inlineCTA=await page.evaluate(()=>{
+   const bar=document.getElementById('v7-wardrobe-selection');
+   const card=document.querySelector('#v7-wardrobe-grid .v7-item-card');
+   return {position:getComputedStyle(bar).position,
+    barBottom:bar.getBoundingClientRect().bottom,
+    cardTop:card.getBoundingClientRect().top};
+  });
+  assert.equal(inlineCTA.position,'static','wardrobe CTA is not floating over garments');
+  assert.ok(inlineCTA.barBottom<=inlineCTA.cardTop+2,'wardrobe CTA never covers the first garment card');
+  assert.equal(await page.locator('#v7-wardrobe-grid .v7-edit-photo').count(),4,
+   'every clothing photo can open the original editor');
+  await page.locator('#v7-wardrobe-grid .v7-edit-photo').first().click();
+  assert.equal(await page.locator('#invEditor').isVisible(),true,
+   'the original editor still opens on top of V7');
+  await page.locator('#invEditName').fill('Synthetic Slim Shirt Updated');
+  await page.locator('#invEditor button[onclick="saveInvEditor()"]').click();
+  await page.waitForFunction(()=>document.querySelector('#v7-wardrobe-grid .v7-item-caption strong')?.textContent==='Synthetic Slim Shirt Updated');
+  await page.locator('#v7-wardrobe-grid .v7-edit-photo').first().click();
+  await page.locator('#invEditor button[onclick="wearFromInventoryDetail()"]').click();
+  await page.waitForFunction(()=>window.__vithuV7.inspect().screen==='avatar',
+   {timeout:10000});
+  assert.equal(await page.locator('#invEditor').isVisible(),false,'editor closes after dressing');
+  await page.evaluate(()=>window.__vithuV7.go('wardrobe'));
+  await page.locator('.v7-head-settings').click();
+  const backup=await page.evaluate(()=>{
+   const dlg=document.getElementById('v7-settings');
+   const label=document.getElementById('v7-backup-import-label');
+   const file=document.getElementById('v7-backup-file');
+   return {open:dlg.open,present:!!file,
+    originalHandler:file?.getAttribute('onchange'),
+    mounted:label?.contains(file),hitArea:label?.getBoundingClientRect().height};
+  });
+  assert.equal(backup.open,true,'settings modal is reachable');
+  assert.equal(backup.present,true,'the original backup file input is present');
+  assert.equal(backup.mounted,true,'backup file input is in the visible native label');
+  assert.ok(backup.hitArea>=40,'backup file picker has an iPhone-sized tap target');
+  assert.match(backup.originalHandler,/importBackup\(event\)/,'same backup import handler');
+  await page.locator('#v7-settings button').last().click();
   await page.evaluate(()=>window.scrollTo({top:0,left:0,behavior:'instant'}));
   await page.screenshot({path:await (async()=>{await mkdir(artifacts,{recursive:true});return join(artifacts,kind+'-wardrobe.png')})(),
    animations:'disabled',fullPage:true});
@@ -108,6 +146,20 @@ try{
   await page.locator('#v7-create-picker .v7-additem').nth(2).click();
   await page.waitForFunction(()=>window.__vithuV7.inspect().selected>=2);
   await page.waitForFunction(()=>document.querySelectorAll('#v7-board-slots .has-item').length>=2);
+  await page.evaluate(()=>window.__vithuV7.go('looks'));
+  const emptyLook=await page.evaluate(()=>{
+   const grid=document.getElementById('v7-looks-grid').getBoundingClientRect();
+   const card=document.querySelector('#v7-looks-grid .v7-looks-empty').getBoundingClientRect();
+   return {width:card.width,ratio:card.width/grid.width,
+    action:document.querySelector('#v7-looks-grid button')?.textContent,
+    title:document.querySelector('#v7-looks-grid h3')?.textContent};
+  });
+  assert.ok(emptyLook.ratio >= (kind==='iphone'?.93:.38),
+    'empty Looks card uses full mobile grid width instead of a narrow column');
+  assert.equal(emptyLook.action,'Aktuellen Look speichern',
+    'draft outfit can be saved directly from the empty Looks view');
+  assert.equal(emptyLook.title,'Dein Outfit ist bereit');
+  await page.evaluate(()=>window.__vithuV7.go('create'));
   const slotBounds=await page.locator('#v7-board-slots .has-item .v7-slot-thumb')
    .evaluateAll(nodes=>nodes.map(n=>{
     const img=n.querySelector('img'),box=n.getBoundingClientRect(),pic=img.getBoundingClientRect();
