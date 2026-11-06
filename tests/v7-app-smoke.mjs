@@ -112,6 +112,21 @@ try{
   assert.equal(await page.evaluate(()=>document.getElementById('v7-stage-host').contains(document.getElementById('stage'))),true);
   assert.equal(await page.evaluate(()=>document.getElementById('v7-modes-host').contains(document.querySelector('.fashion25d-picker'))),true);
   await page.waitForFunction(()=>document.querySelector('#avatarV2Garments [data-avatar-slot="top"]'),{timeout:12000});
+  const anatomy=await page.evaluate(()=>{
+   const figure=document.getElementById('figure');
+   const base=document.getElementById('fashion25dBase');
+   const foreground=document.getElementById('fashion25dForeground');
+   const r=figure.getBoundingClientRect(),b=base.getBoundingClientRect(),f=foreground.getBoundingClientRect();
+   return {basePosition:getComputedStyle(base).position,frontPosition:getComputedStyle(foreground).position,
+    bodyTopDelta:Math.abs(b.top-r.top),headTopDelta:Math.abs(f.top-r.top),
+    headPresent:!!foreground.querySelector('#fashion25dHead'),
+    legacyHidden:getComputedStyle(document.getElementById('personaDrawing')).display==='none'};
+  });
+  assert.equal(anatomy.basePosition,'absolute','body SVG stays absolute after V7 stage move');
+  assert.equal(anatomy.frontPosition,'absolute','head/hands SVG stays absolute after V7 stage move');
+  assert.ok(anatomy.bodyTopDelta<2&&anatomy.headTopDelta<2,'head remains aligned with body instead of falling below shoes');
+  assert.equal(anatomy.headPresent,true,'personalized head SVG rendered');
+  assert.equal(anatomy.legacyHidden,true,'old cartoon layer hidden in Fashion 2.5D');
   await page.screenshot({path:join(artifacts,kind+'-avatar.png'),animations:'disabled',fullPage:true});
   screenshots.push(kind+'-avatar.png');
   await page.click('#fashionStudioChoice');
