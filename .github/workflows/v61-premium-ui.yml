@@ -1,0 +1,52 @@
+name: V6.1 premium UI — iPhone and desktop
+on:
+  push:
+    branches:
+      - feat/v6-premium-ui-sprint-20261106
+  pull_request:
+    paths:
+      - 'preview/v6-premium-ui-20261106/**'
+      - 'tests/v61-premium-ui-smoke.mjs'
+      - '.github/workflows/v61-premium-ui.yml'
+  workflow_dispatch:
+jobs:
+  premium-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test dependencies
+        run: |
+          npm install --no-save playwright
+          npx playwright install chromium
+      - name: Test mobile and desktop with original garment renderer
+        run: node tests/v61-premium-ui-smoke.mjs
+      - name: Publish screenshot comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v61-premium-ui-mobile-desktop-screenshots
+          path: artifacts/v61-premium-ui/
+          retention-days: 30
+          if-no-files-found: warn
+      - name: Package full V6.1 preview as Netlify ZIP
+        run: |
+          mkdir -p artifacts/v61-build/site
+          cp -a preview/v6-premium-ui-20261106/. artifacts/v61-build/site/
+          (cd artifacts/v61-build/site && zip -q -r ../vithu-wardrobe-v61-premium-netlify.zip .)
+          cp artifacts/v61-build/site/index.html artifacts/v61-build/vithu-wardrobe-v61-index.html
+          unzip -t artifacts/v61-build/vithu-wardrobe-v61-premium-netlify.zip | tail -1
+      - name: Publish optional deployable files
+        uses: actions/upload-artifact@v4
+        with:
+          name: vithu-wardrobe-v61-netlify-zip-and-html
+          path: |
+            artifacts/v61-build/vithu-wardrobe-v61-premium-netlify.zip
+            artifacts/v61-build/vithu-wardrobe-v61-index.html
+          retention-days: 30
+          if-no-files-found: error
