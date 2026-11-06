@@ -14,7 +14,8 @@ const skins={
  light:{light:'#f2c7ab',base:'#dca487',shade:'#ae765c',deep:'#7f4b3a'},
  warm:{light:'#dfaf8a',base:'#bc8666',shade:'#895739',deep:'#603a29'},
  medium:{light:'#c48e6c',base:'#9a6248',shade:'#683f2f',deep:'#462a23'},
- deep:{light:'#aa7858',base:'#80503c',shade:'#553429',deep:'#34231f'}
+ deep:{light:'#aa7858',base:'#80503c',shade:'#553429',deep:'#34231f'},
+ studio:{light:'#cbd3d5',base:'#929da3',shade:'#67747e',deep:'#46525c'}
 };
 const radii={lean:.94,athletic:1,broad:1.075};
 let mode='fashion'; // Preview-local comparison; never stored in IndexedDB.
@@ -188,6 +189,25 @@ function headMarkup(profile,c){
  '<path d="M 82 67 L 82 83 Q 90 88 98 83 L 98 67 Z" fill="url(#f25-skin)" stroke="'+c.deep+'" stroke-opacity=".15" stroke-width=".5"/>'+
  face+beard+hair+glasses+'</g>';
 }
+// A deliberately anonymous fashion-display mannequin, not a simulated human.
+// Its neutral material separates photoreal garment pixels from abstract skin.
+function studioHeadMarkup(){
+ return '<g id="fashion25dStudioHead">'+
+  '<path d="M 82 66 L 82 84 Q 90 88 98 84 L 98 66 Z" fill="url(#f25-skin)" stroke="#46525c" stroke-opacity=".17" stroke-width=".5"/>'+
+  '<path d="M 89 17 C 76 16 70 24 70 39 C 70 52 75 64 82 72 '+
+   'Q 90 79 98 72 C 106 64 110 52 110 39 C 111 24 102 16 89 17 Z" '+
+   'fill="url(#f25-head)" stroke="#46525c" stroke-width=".65" stroke-opacity=".18"/>'+
+  '<path d="M 77 28 C 76 40 78 51 83 63" fill="none" stroke="#eff4f2" stroke-width="1.2" stroke-opacity=".28" stroke-linecap="round"/>'+
+  '<path d="M 102 29 C 106 45 103 59 96 67" fill="none" stroke="#4c5962" stroke-width="1.1" stroke-opacity=".14" stroke-linecap="round"/>'+
+  '</g>';
+}
+function studioHandsMarkup(){
+ const palm='<path d="M 30 209 Q 36 206 42 210 '+
+  'L 42.5 225 Q 41.5 232 36.5 233 Q 31 232.5 30 227 Z" '+
+  'fill="url(#f25-skin)" stroke="#46525c" stroke-width=".48" stroke-opacity=".14"/>';
+ return '<g id="fashion25dStudioHands"><g>'+palm+'</g>'+
+ '<g transform="translate(180 0) scale(-1 1)">'+palm+'</g></g>';
+}
 function handMarkup(){
  const path='<path d="M 31 210 C 34 207 40 208 43 211 '+
  'L 44 219 Q 47 223 45 226 Q 43 229 42 226 '+
@@ -198,7 +218,7 @@ function handMarkup(){
  '<g transform="translate(180 0) scale(-1 1)">'+path+'</g></g>';
 }
 function renderPerson(){
- const p=currentProfile(),c=skins[p.skin];
+ const p=currentProfile(),c=mode==='studio'?skins.studio:skins[p.skin];
  const build=radii[p.build],profileScale='translate(90 0) scale('+build+' 1) translate(-90 0)';
  const armStart=bareArmStart();
  // The forearm begins at the actual cuff. The garment is never modified.
@@ -218,15 +238,17 @@ function renderPerson(){
  (!wearing('top')&&!wearing('outerwear')?neutralTop():'')+
  '</g>';
  front.innerHTML=gradientDefs(c)+
- '<g transform="'+profileScale+'">'+handMarkup()+'</g>'+headMarkup(p,c);
+ '<g transform="'+profileScale+'">'+(mode==='studio'?studioHandsMarkup():handMarkup())+'</g>'+
+ (mode==='studio'?studioHeadMarkup():headMarkup(p,c));
  const root=figure;
  root.dataset.fashionBuild=p.build;
  root.dataset.fashionSleeveClipStart=String(armStart);
 }
 function sync(){
- const active=mode==='fashion'&&typeof avatarRenderMode!=='undefined'
+ const active=(mode==='fashion'||mode==='studio')&&typeof avatarRenderMode!=='undefined'
   &&avatarRenderMode==='silhouette'&&typeof view!=='undefined'&&view==='styled';
  figure.classList.toggle('fashion25d-enabled',active);
+ figure.classList.toggle('fashion25d-studio',active&&mode==='studio');
  // Explicit inline visibility prevents WebKit from retaining the old SVG
  // during class-only display changes on a composited mobile stage.
  const legacy=figure.querySelector('#personaDrawing');
@@ -235,24 +257,30 @@ function sync(){
  front.style.setProperty('display',active?'block':'none','important');
  figure.dataset.fashion25dActive=String(active);
  const primary=document.getElementById('fashion25dChoice');
+ const studio=document.getElementById('fashionStudioChoice');
  const fallback=document.getElementById('fashionV5Choice');
  if(primary){primary.classList.toggle('active',mode==='fashion');primary.classList.toggle('secondary',mode!=='fashion');primary.setAttribute('aria-pressed',String(mode==='fashion'));}
+ if(studio){studio.classList.toggle('active',mode==='studio');studio.classList.toggle('secondary',mode!=='studio');studio.setAttribute('aria-pressed',String(mode==='studio'));}
  if(fallback){fallback.classList.toggle('active',mode==='v5');fallback.classList.toggle('secondary',mode!=='v5');fallback.setAttribute('aria-pressed',String(mode==='v5'));}
+ const description=document.getElementById('fashion25dInfo');
+ if(description)description.textContent=mode==='studio'
+   ?'Studio-Mannequin: anonymer Modekörper ohne Comic-Gesicht · echte Kleidung unverändert'
+   :'Kostenloser 2.5D-Körpertest · Original-Kleidung bleibt unverändert · kein Cloud-Modell';
  if(!active)return;
  const p=currentProfile();
- const sig=[p.build,p.skin,p.hair,p.beard,p.glasses,
+ const sig=[mode,p.build,p.skin,p.hair,p.beard,p.glasses,
   chosen?.top||'',chosen?.outerwear||'',chosen?.bottom||'',chosen?.shoes||'',
   wearing('top'),wearing('outerwear'),wearing('bottom'),wearing('shoes'),
   bareArmStart()].join('|');
  if(sig!==lastSignature){lastSignature=sig;renderPerson();}
 }
 function selectMode(next){
- if(next!=='fashion'&&next!=='v5')return;
+ if(next!=='fashion'&&next!=='studio'&&next!=='v5')return;
  mode=next;lastSignature='';
  sync();
 }
 window.setFashionAvatarMode=selectMode;
-window.__vithuFashion25dTest={currentProfile,selectMode,sync,renderPerson,bareArmStart,hasLocalStorageWrites:false};
+window.__vithuFashion25dTest={currentProfile,selectMode,sync,renderPerson,bareArmStart,getMode:()=>mode,hasLocalStorageWrites:false};
 const previousRender=window.renderAvatarV2;
 if(typeof previousRender==='function'){
  window.renderAvatarV2=function(...args){
