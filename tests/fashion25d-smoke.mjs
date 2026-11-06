@@ -20,8 +20,11 @@ assert.match(html,/vithu_wardrobe_avatar_v5_joints_20261105/,'same browser wardr
 assert.match(html,/id="batchReviewDialog"/,'multi-photo review unchanged');
 assert.match(html,/src="\.\/avatar-fashion25d\.js/,'new module loaded');
 assert.match(html,/fashion25dChoice/,'reversible new-vs-old comparison control');
-assert.doesNotMatch(fashion,/indexedDB\.open|\.put\(|\.delete\(|fetch\(|https?:\/\//,
- 'fashion layer has no storage mutations or remote calls');
+assert.doesNotMatch(fashion,/indexedDB\.open|\.put\(|\.delete\(|\bfetch\(/,
+ 'fashion layer has no storage mutations or remote fetch calls');
+const urls=fashion.match(/https?:\/\/[^\s'"]+/g)||[];
+assert.deepEqual(urls.filter(url=>url!=='http://www.w3.org/2000/svg'),[],
+ 'Only the standard local SVG namespace URI is allowed');
 let chromium;
 try {({chromium}=await import('playwright'))}
 catch {throw Error('Install: npm install --no-save playwright && npx playwright install chromium')}
