@@ -1,0 +1,38 @@
+name: V6 responsive fashion studio preview
+
+on:
+  push:
+    branches:
+      - feat/v6-wardrobe-dashboard-20261106
+  pull_request:
+    paths:
+      - 'preview/v6-fashion-studio-20261106/**'
+      - 'tests/v6-fashion-studio-smoke.mjs'
+      - '.github/workflows/v6-fashion-studio.yml'
+  workflow_dispatch:
+
+jobs:
+  web-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright test tools
+        run: |
+          npm install --no-save playwright
+          npx playwright install chromium
+      - name: Test 390px iPhone and 1440px desktop with original cutout data flow
+        run: node tests/v6-fashion-studio-smoke.mjs
+      - name: Publish screenshots and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v6-fashion-studio-preview-mobile-desktop
+          path: artifacts/v6-fashion-studio/
+          retention-days: 30
+          if-no-files-found: warn
