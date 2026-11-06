@@ -1,0 +1,132 @@
+/* VITHU WARDROBE V6 — a progressive, CSS-only visual skin around working V5.
+ * Does not change import, original cutouts, stored clothes or fit algorithms.
+ * No subscriptions, remote processing or browser storage here.
+ */
+:root{--v6-bg:#090b0e;--v6-panel:#171b20;--v6-card:#23282f;--v6-stroke:#333b45;--v6-lime:#b5ffa4;--v6-muted:#aeb7c1;--v6-radius:22px}
+html{background:var(--v6-bg)}
+body.v6-ready{max-width:1560px;margin:0 auto;padding:19px clamp(12px,2.5vw,34px) 32px;color:#f4f6f5;background:radial-gradient(circle at 54% 9%,#19201f65,transparent 36%),var(--v6-bg)}
+body.v6-ready button{transition:background-color .15s,border-color .15s,box-shadow .15s}
+body.v6-ready .panel{background:var(--v6-panel);border-color:#303640;border-radius:22px;box-shadow:0 12px 32px #0002}
+body.v6-ready .wardrobe-header{padding:0 0 17px;display:flex;align-items:center;gap:22px;justify-content:space-between}
+body.v6-ready .wardrobe-header h1{font-size:clamp(21px,2.45vw,29px);letter-spacing:-1px;line-height:1;white-space:nowrap}
+body.v6-ready .wardrobe-header h1 span{color:var(--v6-lime)}
+body.v6-ready .wardrobe-tabs{position:sticky;top:0;z-index:31;margin:0 0 20px;padding:10px 3px 13px;border-bottom:1px solid #343c443b;background:#0b0e10e8;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);display:flex;justify-content:center;align-items:center;gap:10px}
+body.v6-ready .wardrobe-tabs button{min-width:142px;min-height:47px;padding:12px 17px;border:1px solid #343b42;border-radius:15px;background:linear-gradient(140deg,#292e34,#1b2026);color:#f0f2f3;font-size:14px;font-weight:750;box-shadow:none}
+body.v6-ready .wardrobe-tabs button.active{outline:2px solid #8edb83;outline-offset:2px;border-color:var(--v6-lime);background:linear-gradient(120deg,#c0ffad,#a5ee91);color:#132018}
+body.v6-ready .layout{grid-template-columns:minmax(0,1fr);gap:15px}
+body.v6-ready .layout>section{min-width:0}
+body.v6-ready .closet-hero{background:linear-gradient(125deg,#193023,#1a2421 68%,#1a1e23);border-color:#46684b}
+body.v6-ready .closet-hero h2{letter-spacing:-1.2px}
+body.v6-ready .inv-card{background:linear-gradient(145deg,#262b32,#1a2026);border-color:#343c44;border-radius:20px}
+body.v6-ready .inv-photo{background:linear-gradient(145deg,#f8f8f6,#dee1df)}
+body.v6-ready .inv-card:hover{border-color:#9fca9b}
+body.v6-ready .closet-import{max-width:1100px;margin:0 auto}
+body.v6-ready #avatarPanel{border:0;box-shadow:none;background:transparent;padding:0;overflow:visible}
+body.v6-ready #avatarPanel>.sectionHead{display:none}
+body.v6-ready #avatarFold{width:100%}
+body.v6-ready .v6-topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin:4px 0 20px}
+body.v6-ready .v6-topbar h2{font-size:clamp(25px,3vw,33px);font-weight:800;margin:0;letter-spacing:-1.1px}
+body.v6-ready .v6-topbar p{margin:6px 0 0;font-size:13px;color:#a7b3af}
+body.v6-ready .v6-tag{display:inline-flex;align-items:center;gap:7px;border:1px solid #477449;background:#203626;padding:7px 10px;border-radius:20px;color:#b6f7a9;font-size:11px;font-weight:800;letter-spacing:.25px}
+body.v6-ready .v6-version-note{font-size:11px;color:#bbc7c0;display:flex;align-items:center;gap:8px}
+body.v6-ready .v6-dot{width:6px;height:6px;display:inline-block;border-radius:50%;background:#b6ff99;box-shadow:0 0 10px #b6ff9977}
+body.v6-ready #avatarFold .v6-view-tabs{display:flex;gap:5px;flex-wrap:wrap;margin:0;padding:4px;border:1px solid #333e46;border-radius:15px;background:#1b2228}
+body.v6-ready #avatarFold .v6-view-tabs button{border-radius:11px;font-size:12px;min-height:38px;padding:10px 16px;background:transparent;color:#aeb9bb}
+body.v6-ready #avatarFold .v6-view-tabs button.active{background:#b7ffa8;color:#152719;outline:0}
+body.v6-ready #avatarFold .studio.v6-workspace{display:grid;grid-template-columns:minmax(215px,255px) minmax(345px,1fr) minmax(280px,345px);gap:18px;align-items:start}
+body.v6-ready .v6-side,body.v6-ready .v6-right{background:#15191e;border:1px solid #303841;border-radius:23px;padding:18px;min-width:0;box-shadow:0 20px 40px #0002}
+body.v6-ready .v6-left h3,body.v6-ready .v6-right h3{font-size:13px;text-transform:uppercase;letter-spacing:1.65px;font-weight:820;color:#d4dcdd;margin:0 0 14px}
+body.v6-ready .v6-side-heading{margin:6px 0 10px;font-size:11px;text-transform:uppercase;letter-spacing:1.9px;color:#a9b4bc;font-weight:800}
+body.v6-ready .v6-sidebar-section+ .v6-sidebar-section{border-top:1px solid #313b42;padding-top:18px;margin-top:18px}
+body.v6-ready .v6-left #fashion25dChoice,body.v6-ready .v6-left #fashionStudioChoice,body.v6-ready .v6-left #fashionV5Choice{width:100%;min-height:58px;text-align:left;justify-content:flex-start;padding:12px 14px;font-size:13px;border:1px solid #3c444e;background:linear-gradient(140deg,#2b3138,#20262d);color:#d1d5db;border-radius:13px;outline:0;box-shadow:none}
+body.v6-ready .v6-left .fashion25d-picker{display:grid;grid-template-columns:1fr;gap:8px;margin:0}
+body.v6-ready .v6-left .fashion25d-picker button.active{background:linear-gradient(110deg,#233b2a,#283b2e)!important;border-color:#b7ff9f!important;color:#c4ffb6!important;outline:1px solid #b7ff9f;outline-offset:1px}
+body.v6-ready .v6-left .avatar-v4-switch{margin:0;display:flex;gap:6px;background:#20262c;border:1px solid #343f46;border-radius:13px;padding:4px}
+body.v6-ready .v6-left .avatar-v4-switch button{flex:1;min-width:0;min-height:42px;white-space:nowrap;padding:10px 8px;font-size:12px}
+body.v6-ready .v6-left .avatar-v4-switch button.active{outline:0;background:#baffae;color:#132317}
+body.v6-ready .v6-left .fashion25d-note{font-size:11px;line-height:1.55;color:#a8b5ba;margin:8px 0 0}
+body.v6-ready .v6-appearance{display:grid;gap:9px}
+body.v6-ready .v6-appearance label{display:grid;gap:7px;color:#c1cbd0;font-size:12px}
+body.v6-ready .v6-appearance select{background:#20262d;border:1px solid #454e55;border-radius:12px;min-height:44px;width:100%;padding:10px 11px}
+body.v6-ready .v6-tip{padding:12px;border:1px solid #405746;background:linear-gradient(140deg,#1e3025,#1d2625);color:#b9d9c0;border-radius:13px;font-size:11px;line-height:1.5}
+body.v6-ready .v6-left .persona-editor{margin:0;border:1px solid #343d45;border-radius:12px;background:#1f252b;padding:10px 12px}
+body.v6-ready .v6-left .persona-editor summary{font-size:12px}
+body.v6-ready .v6-center{min-width:0}
+body.v6-ready .v6-stage-panel{overflow:hidden;border-radius:26px;background:radial-gradient(ellipse at 47% 25%,#3e4148 0%,#272a30 47%,#171b23 85%);border:1px solid #424b57;box-shadow:inset 0 1px 1px #ffffff10,0 18px 46px #0004}
+body.v6-ready .v6-stage-heading{height:52px;padding:15px 19px;display:flex;justify-content:space-between;align-items:center;gap:12px;position:relative;z-index:2}
+body.v6-ready .v6-stage-heading strong{font-size:13px;color:#eef2f0;letter-spacing:.1px}
+body.v6-ready .v6-stage-heading span{font-size:11px;color:#b8ddbb;border:1px solid #617a64;background:#25372b;border-radius:18px;padding:5px 9px}
+body.v6-ready #avatarPanel .v6-center .stage{border:0!important;border-radius:0!important;min-height:540px;height:540px;background:transparent;box-shadow:none;overflow:visible}
+body.v6-ready #avatarPanel .v6-center .stage:before{bottom:27px;background:#03070c88;filter:blur(14px)}
+body.v6-ready .v6-stage-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 17px 17px;border-top:1px solid #ffffff12;flex-wrap:wrap}
+body.v6-ready .v6-stage-footer span{font-size:11px;color:#a7b8b4;max-width:70%;line-height:1.4}
+body.v6-ready .v6-stage-footer button{font-size:12px;padding:9px 11px}
+body.v6-ready .v6-right .v6-look-head{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-bottom:8px}
+body.v6-ready .v6-right .v6-look-head h3{margin:0}
+body.v6-ready .v6-right .v6-look-head small{font-size:10px;color:#b4f4a8}
+body.v6-ready #avatarPanel .v6-right #v2OutfitPicker{display:block;margin:0!important;padding:0!important;border:0!important;background:transparent!important}
+body.v6-ready .v6-right .v3-studio-head{align-items:stretch;gap:9px;flex-direction:column;margin:5px 0 12px}
+body.v6-ready .v6-right .v3-studio-head .v3-studio-kicker{display:none}
+body.v6-ready .v6-right .v3-studio-caption{font-size:12px;color:#a9b6ba}
+body.v6-ready .v6-right .v3-studio-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+body.v6-ready .v6-right .v3-studio-actions button{min-height:43px;font-size:12px;padding:10px 8px}
+body.v6-ready .v6-right .v3-studio-actions .v3-save{background:#baffaa;color:#18301d;border:1px solid #baffaa}
+body.v6-ready .v6-right .v3-garment-grid{display:grid;grid-template-columns:1fr;gap:9px}
+body.v6-ready .v6-right .v3-garment-card{border:1px solid #343e49;background:#22272e;border-radius:15px;min-height:83px;padding:8px}
+body.v6-ready .v6-right .v3-garment-card:hover{border-color:#b6f4a4;background:#2a3336}
+body.v6-ready .v6-right .v3-garment-thumb{border-radius:11px;background:#f3f3ee}
+body.v6-ready .v6-right .v6-adjust-box{border-top:1px solid #343f46;margin-top:18px;padding-top:14px}
+body.v6-ready .v6-right .v6-adjust-box>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:#d4e2d7;cursor:pointer;font-weight:750}
+body.v6-ready .v6-right .v6-adjust-box>summary:after{content:"⌄";color:#aee49f}
+body.v6-ready .v6-right .v6-adjust-box[open]>summary{margin-bottom:12px}
+body.v6-ready .v6-right #avatar-adjust{margin:0;padding:11px;background:#1d2923}
+body.v6-ready .v6-right .avatar-outfit{border-color:#35443b;background:#1c2621}
+body.v6-ready .v6-info-card{margin-top:16px;border:1px solid #34464c;border-radius:14px;padding:13px;background:#202a2e;color:#b5c3c4;font-size:11px;line-height:1.6}
+body.v6-ready .v6-info-card strong{color:#c5ffaf;display:block;margin-bottom:5px;font-size:12px}
+body.v6-ready .v6-mobile-hint{font-size:11px;color:#889a9f;margin:12px 2px 0}
+body.v6-ready #looksPanel{background:#15191e;border-color:#303942;margin-top:8px}
+body.v6-ready .v6-secondary-area{margin:15px 0 0}
+body.v6-ready .v6-secondary-area #photoControls{padding:10px 0}
+body.v6-ready .v6-right .slots{grid-template-columns:1fr}
+body.v6-ready .v6-right .v6-more-settings{margin-top:13px}
+body.v6-ready .v6-more-settings>summary{list-style:none;cursor:pointer;border:1px solid #343d45;border-radius:12px;padding:11px 13px;color:#b3c3c1;font-size:12px;font-weight:700}
+body.v6-ready .v6-more-settings[open]>summary{margin-bottom:9px}
+body.v6-ready #avatarPanel .v6-workspace .v6-old-description{font-size:11px;color:#88969c;margin:9px 0}
+@media (max-width:1200px) and (min-width:791px){
+ body.v6-ready #avatarFold .studio.v6-workspace{grid-template-columns:minmax(188px,230px) minmax(0,1fr) minmax(240px,290px);gap:12px}
+ body.v6-ready .v6-side,body.v6-ready .v6-right{padding:13px}
+ body.v6-ready #avatarPanel .v6-center .stage{height:505px;min-height:505px}
+}
+@media(max-width:790px){
+ body.v6-ready{padding:12px 12px 28px}
+ body.v6-ready .wardrobe-header{padding:1px 2px 10px}
+ body.v6-ready .wardrobe-tabs{top:0;margin:0 0 14px;gap:7px;padding:8px 0 12px}
+ body.v6-ready .wardrobe-tabs button{min-width:0;flex:1;padding:12px 6px;font-size:12px;min-height:46px}
+ body.v6-ready .v6-topbar{gap:12px;margin:4px 0 14px}
+ body.v6-ready .v6-topbar h2{font-size:25px}
+ body.v6-ready .v6-version-note{display:none}
+ body.v6-ready #avatarFold .studio.v6-workspace{display:flex;flex-direction:column;gap:13px}
+ body.v6-ready .v6-center{order:1;width:100%}
+ body.v6-ready .v6-right{order:2;width:100%;padding:15px}
+ body.v6-ready .v6-side{order:3;width:100%;padding:15px}
+ body.v6-ready .v6-stage-panel{border-radius:22px}
+ body.v6-ready #avatarPanel .v6-center .stage{min-height:510px;height:510px}
+ body.v6-ready .v6-stage-heading{padding:14px 14px 8px;height:45px}
+ body.v6-ready .v6-stage-footer{padding:12px}
+ body.v6-ready .v6-stage-footer span{max-width:68%}
+ body.v6-ready .v6-right .v3-studio-head{flex-direction:row;align-items:center}
+ body.v6-ready .v6-right .v3-studio-actions{grid-template-columns:1fr 1fr}
+ body.v6-ready .v6-right .v3-garment-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ body.v6-ready .v6-left .fashion25d-picker{grid-template-columns:repeat(2,minmax(0,1fr))}
+ body.v6-ready .v6-left #fashion25dChoice,body.v6-ready .v6-left #fashionStudioChoice,body.v6-ready .v6-left #fashionV5Choice{min-height:52px;padding:10px;font-size:12px}
+}
+@media(max-width:420px){
+ body.v6-ready .wardrobe-header h1{font-size:21px}
+ body.v6-ready #avatarPanel .v6-center .stage{min-height:485px;height:485px}
+ body.v6-ready .v6-right .v3-garment-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ body.v6-ready .v6-right .v3-garment-card{min-height:74px;padding:7px;gap:6px}
+ body.v6-ready .v6-right .v3-garment-thumb{flex:0 0 43px;width:43px;height:54px}
+ body.v6-ready .v6-right .v3-garment-name{font-size:11px}
+ body.v6-ready .v6-left .fashion25d-picker{grid-template-columns:1fr 1fr}
+}
+@media(prefers-reduced-motion:reduce){body.v6-ready *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
