@@ -1,0 +1,36 @@
+name: Fashion 2.5D isolated preview and iPhone smoke test
+on:
+  push:
+    branches:
+      - feat/avatar-fashion-25d-safe-preview-20261106
+  pull_request:
+    paths:
+      - 'preview/avatar-fashion25d-20261106/**'
+      - 'tests/fashion25d-smoke.mjs'
+      - '.github/workflows/fashion25d-visual.yml'
+  workflow_dispatch:
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install free browser test dependencies
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Check 2.5D preview, mobile UI, and reversible V5 fallback
+        run: node tests/fashion25d-smoke.mjs
+      - name: Save synthetic iPhone screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fashion25d-iphone-390x844-dpr3
+          path: artifacts/fashion25d-iphone/
+          if-no-files-found: warn
+          retention-days: 30
