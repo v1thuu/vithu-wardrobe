@@ -1,0 +1,54 @@
+name: V7 independent fashion app – mobile + desktop
+
+on:
+  push:
+    branches:
+      - feat/v7-screen-first-fashion-app-20261106
+  pull_request:
+    paths:
+      - 'preview/v7-wardrobe-app-20261106/**'
+      - 'tests/v7-app-smoke.mjs'
+      - '.github/workflows/v7-fashion-app.yml'
+  workflow_dispatch:
+
+jobs:
+  v7:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install free browser automation for tests
+        run: |
+          npm install --no-save playwright
+          npx playwright install chromium
+      - name: Test full V7 flows, live original SVG, and original multi-file importer
+        run: node tests/v7-app-smoke.mjs
+      - name: Preserve iPhone and desktop screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v7-fashion-app-iphone-and-desktop
+          path: artifacts/v7-app/
+          retention-days: 30
+          if-no-files-found: warn
+      - name: Package free standalone Netlify ZIP
+        run: |
+          mkdir -p artifacts/v7-build/site
+          cp -a preview/v7-wardrobe-app-20261106/. artifacts/v7-build/site/
+          (cd artifacts/v7-build/site && zip -q -r ../vithu-wardrobe-v7-netlify.zip .)
+          cp artifacts/v7-build/site/index.html artifacts/v7-build/vithu-wardrobe-v7-index.html
+          unzip -t artifacts/v7-build/vithu-wardrobe-v7-netlify.zip | tail -1
+      - name: Publish ZIP and HTML as downloadable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vithu-wardrobe-v7-netlify-and-html
+          path: |
+            artifacts/v7-build/vithu-wardrobe-v7-netlify.zip
+            artifacts/v7-build/vithu-wardrobe-v7-index.html
+          retention-days: 30
+          if-no-files-found: error
