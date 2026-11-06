@@ -355,7 +355,7 @@ function syncLegacy(){
 function init(){
  if($('v7-app'))return;
  const stage=$('stage'),importPanel=$('importPanel'),
-  styles=$('.fashion25d-picker'),cuts=$('.avatar-v4-switch'),
+  styles=document.querySelector('.fashion25d-picker'),cuts=document.querySelector('.avatar-v4-switch'),
   tabs=$('avatarFold')?.querySelector(':scope > .tabs');
  if(!stage||!importPanel||!styles||!cuts)return;
  root=el('div','v7-app');root.id='v7-app';
